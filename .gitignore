@@ -1,0 +1,13 @@
+# Arquivos de log
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Pasta de dependências do Node.js
+
+# Pasta de build/distribuição
+
+node_modules/
+dist/
