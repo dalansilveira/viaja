@@ -11,12 +11,13 @@
     "appId": "com.dpcs.viaja",
     "productName": "ViaJá",
     "files": [
-      "teste.html",
+      "index.html",
       "main.js",
       "logo.png",
       "logodark.png",
       "splash.html",
-      "preload-splash.js"
+      "preload-splash.js",
+      "sw.js"
     ],
     "win": {
       "target": "nsis",
@@ -27,12 +28,20 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^28.2.0",
-    "electron-builder": "^24.9.1"
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
   },
   "dependencies": {
     "@capacitor/cli": "^7.4.2",
     "@capacitor/core": "^7.4.2",
     "electron-store": "^8.2.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dalansilveira/viaja.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dalansilveira/viaja/issues"
+  },
+  "homepage": "https://github.com/dalansilveira/viaja#readme"
 }

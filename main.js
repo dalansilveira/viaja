@@ -1,3 +1,4 @@
+
 // main.js
 
 const { app, BrowserWindow, ipcMain } = require('electron');
@@ -72,7 +73,7 @@ function createWindow() {
   });
 
   // e carrega o teste.html do seu app.
-  mainWindow.loadFile('teste.html');
+  mainWindow.loadFile('index.html');
 
   mainWindow.setMenu(null); // Remove o menu padrão (File, Edit, etc.)
 
@@ -90,7 +91,7 @@ function createWindow() {
         splashWindow.close();
       }
       mainWindow.show();
-    }, 200); // Atraso de 200ms
+    }, 1200); // Atraso de 200ms
   });
 }
 
@@ -102,6 +103,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
