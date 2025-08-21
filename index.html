@@ -3,21 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Via Já - Seu aplicativo de mobilidade urbana rápido e confiável.">
+
+    <!-- PWA & SEO Meta Tags -->
     <title>Via Já</title>
-    <!-- Inclui a biblioteca Tailwind CSS para estilização -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Link para o Manifest do PWA -->
     <link rel="manifest" href="manifest.json">
-    <!-- Inclui a biblioteca Leaflet CSS e JS para o mapa -->
+    <meta name="theme-color" content="#ffffff">
+    <link rel="apple-touch-icon" href="logo.png"> <!-- Use um ícone de 180x180 ou 192x192 -->
+
+    <!-- Stylesheets -->
+    <!-- Inclui a biblioteca Tailwind CSS para estilização -->
+    <script src="https://cdn.tailwindcss.com"></script> <!-- Para produção, considere usar um build step com PostCSS -->
     <!-- Importa a fonte Poppins do Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha2d-pXw6E/s+dE/b+rPz/xU7T7D+o/A/6H6h/L/G/Y+J+o=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha2d-pXw6E/s+dE/b+rPz/xU7T7D+o/A/6H6h/L/G/Y+J+o=" crossorigin=""></script>
     <!-- Inclui a biblioteca de roteamento Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    <!-- Scripts (carregados com 'defer' para não bloquear a renderização da página) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha2d-pXw6E/s+dE/b+rPz/xU7T7D+o/A/6H6h/L/G/Y+J+o=" crossorigin="" defer></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js" defer></script>
     
     <!-- Inclui os SDKs do Firebase necessários (App, Auth, Firestore) -->
     <!-- A inicialização do Firebase foi comentada temporariamente.
@@ -36,6 +43,7 @@
             }
         }
     </script>
+    <!-- Para melhor performance e organização, considere mover este bloco <style> para um arquivo CSS externo (ex: styles.css) -->
     <style>
         /*
         * Define as variáveis de cor padrão para o tema claro.
@@ -557,12 +565,12 @@
 </head>
 <body class="pwa-container">
     <!-- Modal de Login -->
-    <div id="login-modal">
+    <div id="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
         <div class="login-content">
-            <button id="close-modal-button" class="close-modal">&times;</button>
-            <h2 class="text-xl font-bold text-center">Entrar</h2>
-            <input id="login-phone" type="tel" placeholder="Telefone" class="login-input">
-            <input id="login-password" type="password" placeholder="Senha" class="login-input">
+            <button id="close-modal-button" class="close-modal" aria-label="Fechar modal">&times;</button>
+            <h2 id="login-title" class="text-xl font-bold text-center">Entrar</h2>
+            <input id="login-phone" type="tel" placeholder="Telefone" class="login-input" aria-label="Telefone">
+            <input id="login-password" type="password" placeholder="Senha" class="login-input" aria-label="Senha">
             <a href="#" id="forgot-password-link" class="text-sm text-blue-500 hover:underline text-right -mt-2 mb-2">Esqueci minha senha</a>
             <div class="login-buttons-container">
                 <button id="login-button" class="modal-button login">
@@ -580,14 +588,14 @@
     </div>
 
     <!-- Modal de Cadastro (Novo) -->
-    <div id="register-modal">
+    <div id="register-modal" role="dialog" aria-modal="true" aria-labelledby="register-title">
         <div class="login-content">
-            <button id="close-register-modal-button" class="close-modal">&times;</button>
-            <h2 class="text-xl font-bold text-center">Criar Nova Conta</h2>
-            <input id="register-name" type="text" placeholder="Nome completo" class="login-input">
-            <input id="register-phone" type="tel" placeholder="Telefone" class="login-input">
-            <input id="register-password" type="password" placeholder="Senha (mín. 6 caracteres)" class="login-input">
-            <input id="register-confirm-password" type="password" placeholder="Confirmar Senha" class="login-input">
+            <button id="close-register-modal-button" class="close-modal" aria-label="Fechar modal">&times;</button>
+            <h2 id="register-title" class="text-xl font-bold text-center">Criar Nova Conta</h2>
+            <input id="register-name" type="text" placeholder="Nome completo" class="login-input" aria-label="Nome completo">
+            <input id="register-phone" type="tel" placeholder="Telefone" class="login-input" aria-label="Telefone">
+            <input id="register-password" type="password" placeholder="Senha (mín. 6 caracteres)" class="login-input" aria-label="Senha">
+            <input id="register-confirm-password" type="password" placeholder="Confirmar Senha" class="login-input" aria-label="Confirmar Senha">
             <div class="login-buttons-container">
                 <button id="create-account-button" class="modal-button login">Criar Conta</button>
                 <button id="back-to-login-button" class="modal-button register">Já tenho uma conta</button>
@@ -597,12 +605,12 @@
     </div>
 
     <!-- Modal de Esqueci a Senha -->
-    <div id="forgot-password-modal">
+    <div id="forgot-password-modal" role="dialog" aria-modal="true" aria-labelledby="forgot-title">
         <div class="login-content">
-            <button id="close-forgot-modal-button" class="close-modal">&times;</button>
-            <h2 class="text-xl font-bold text-center">Recuperar Senha</h2>
+            <button id="close-forgot-modal-button" class="close-modal" aria-label="Fechar modal">&times;</button>
+            <h2 id="forgot-title" class="text-xl font-bold text-center">Recuperar Senha</h2>
             <p class="text-sm text-center text-gray-600 dark:text-gray-400">Digite seu número de telefone para receber um código de recuperação.</p>
-            <input id="forgot-phone" type="tel" placeholder="Telefone" class="login-input">
+            <input id="forgot-phone" type="tel" placeholder="Telefone" class="login-input" aria-label="Telefone para recuperação">
             <div class="login-buttons-container">
                 <button id="send-code-button" class="modal-button login">Enviar Código</button>
                 <button id="back-to-login-from-forgot-button" class="modal-button register">Voltar para o Login</button>
