@@ -3,7 +3,7 @@ import * as state from './state.js';
 import { reverseGeocode, fetchAddressSuggestions } from './api.js';
 import { formatPlaceForDisplay } from './utils.js';
 import { addOrMoveMarker, traceRoute } from './map.js';
-import { saveDestinationToHistory } from './history.js';
+import { saveDestinationToHistory, toggleShowFavorites, renderHistoryList } from './history.js';
 
 let mapMessageTimeout;
 
@@ -23,10 +23,33 @@ export function showMessage(message) {
  * Exibe ou oculta o contêiner do mapa.
  * @param {boolean} visible - Se o mapa deve ser visível.
  */
-export function toggleMapVisibility(visible) {
-    dom.mapContainer.classList.toggle('visible', visible);
-    if (visible) {
+export function toggleMapVisibility(forceVisible = null, fromButton = false) {
+    const isCurrentlyVisible = dom.mapContainer.classList.contains('visible');
+    let shouldBeVisible = forceVisible !== null ? forceVisible : !isCurrentlyVisible;
+
+    // Se a chamada veio do botão, alternar a visibilidade
+    if (fromButton) {
+        shouldBeVisible = !isCurrentlyVisible;
+    } else {
+        // Se não veio do botão, e o mapa está visível e não há modo de seleção, ocultar
+        // Isso evita que o mapa permaneça visível quando não está sendo usado para seleção
+        if (isCurrentlyVisible && !state.currentSelectionMode) {
+            shouldBeVisible = false;
+        }
+    }
+
+    dom.mapContainer.classList.toggle('visible', shouldBeVisible);
+
+    if (shouldBeVisible) {
         setTimeout(() => state.map.invalidateSize(), 500);
+        // Exibir a mensagem do mapa apenas se estiver no modo de seleção
+        if (state.currentSelectionMode) {
+            dom.mapMessage.style.display = 'block';
+            clearTimeout(mapMessageTimeout);
+            mapMessageTimeout = setTimeout(() => {
+                dom.mapMessage.style.display = 'none';
+            }, 5000);
+        }
     } else {
         dom.mapMessage.style.display = 'none';
         clearTimeout(mapMessageTimeout);
@@ -193,3 +216,22 @@ export function toggleTheme() {
         logoElement.src = isDark ? 'imgs/logodark.png' : 'imgs/logo.png';
     }
 }
+
+// Adiciona eventos de clique aos botões de histórico e favoritos
+dom.showHistoryButton.addEventListener('click', () => {
+    toggleShowFavorites(false); // Exibe o histórico
+    dom.showHistoryButton.classList.remove('bg-gray-300', 'text-gray-800');
+    dom.showHistoryButton.classList.add('bg-blue-500', 'text-white');
+    dom.showFavoritesButton.classList.remove('bg-blue-500', 'text-white');
+    dom.showFavoritesButton.classList.add('bg-gray-300', 'text-gray-800');
+    renderHistoryList(); // Renderiza a lista de histórico
+});
+
+dom.showFavoritesButton.addEventListener('click', () => {
+    toggleShowFavorites(true); // Exibe os favoritos
+    dom.showFavoritesButton.classList.remove('bg-gray-300', 'text-gray-800');
+    dom.showFavoritesButton.classList.add('bg-blue-500', 'text-white');
+    dom.showHistoryButton.classList.remove('bg-blue-500', 'text-white');
+    dom.showHistoryButton.classList.add('bg-gray-300', 'text-gray-800');
+    renderHistoryList(); // Renderiza a lista de favoritos
+});

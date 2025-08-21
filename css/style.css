@@ -3,25 +3,26 @@
 * Elas são as cores de fallback, usadas por padrão.
 */
 :root {
-    --bg-body: #f3f4f6;
-    --bg-panel: #ffffff;
-    --bg-input: #ffffff;
-    --text-color: #1f2937;
-    --text-muted: #6b7280;
-    --border-color: #e5e7eb;
+    --bg-body: #f3f4f6; /* Cor de fundo principal do corpo (claro) */
+    --bg-panel: #ffffff; /* Cor de fundo dos painéis (claro) */
+    --bg-input: #ffffff; /* Cor de fundo dos campos de entrada (claro) */
+    --text-color: #1f2937; /* Cor do texto principal (claro) */
+    --text-muted: #6b7280; /* Cor do texto secundário/desabilitado (claro) */
+    --border-color: #3b82f6; /* Cor da borda (claro) */
 }
+
 
 /*
 * Define as variáveis de cor para o tema escuro.
 * Elas são aplicadas quando a classe 'dark' está no body.
 */
 body.dark {
-    --bg-body: lab(8.15 0.64 -11.48);
-    --bg-panel: #1f2937;
-    --bg-input: #1f2937;
-    --text-color: #e5e7eb;
-    --text-muted: #9ca3af;
-    --border-color: #4a5568;
+    --bg-body: lab(8.15 0.64 -11.48); /* Cor de fundo principal do corpo (escuro) */
+    --bg-panel: #1f2937; /* Cor de fundo dos painéis (escuro) */
+    --bg-input: #1f2937; /* Cor de fundo dos campos de entrada (escuro) */
+    --text-color: #e5e7eb; /* Cor do texto principal (escuro) */
+    --text-muted: #9ca3af; /* Cor do texto secundário/desabilitado (escuro) */
+    --border-color: #4a5568; /* Cor da borda (escuro) */
 }
 
 /* Remove o rodapé de atribuição do mapa Leaflet */
@@ -128,8 +129,8 @@ body {
 }
 /* Ajuste do tema escuro para botões de limpeza e veículos */
 body.dark .button-clear {
-    background-color: #4a5568;
-    color: #e2e8f0;
+    background-color: #4a5568; /* Cor de fundo do botão de limpar (escuro) */
+    color: #e2e8f0; /* Cor do texto do botão de limpar (escuro) */
     box-shadow: 4px 6px rgba(0, 0, 0, 0.4);
 }
 .button-submit:hover, .button-clear:hover {
@@ -301,33 +302,33 @@ body.dark .button-clear {
 
 /* Tema escuro para notificações */
 body.dark .push-notification {
-    background: #1f2937;
-    border-left-color: #3b82f6;
+    background: #1f2937; /* Cor de fundo da notificação (escuro) */
+    border-left-color: #3b82f6; /* Cor da borda esquerda da notificação (escuro) */
 }
 
 body.dark .push-notification-info {
-    border-left-color: #60a5fa;
+    border-left-color: #60a5fa; /* Cor da borda esquerda da notificação de informação (escuro) */
 }
 
 body.dark .push-notification-success {
-    border-left-color: #34d399;
+    border-left-color: #34d399; /* Cor da borda esquerda da notificação de sucesso (escuro) */
 }
 
 body.dark .push-notification-warning {
-    border-left-color: #fbbf24;
+    border-left-color: #fbbf24; /* Cor da borda esquerda da notificação de aviso (escuro) */
 }
 
 body.dark .push-notification-error {
-    border-left-color: #f87171;
+    border-left-color: #f87171; /* Cor da borda esquerda da notificação de erro (escuro) */
 }
 
 body.dark .notification-text {
-    color: #e5e7eb;
+    color: #e5e7eb; /* Cor do texto da notificação (escuro) */
 }
 
 body.dark .notification-close:hover {
-    background-color: #374151;
-    color: #d1d5db;
+    background-color: #374151; /* Cor de fundo do botão de fechar notificação ao passar o mouse (escuro) */
+    color: #d1d5db; /* Cor do ícone de fechar notificação ao passar o mouse (escuro) */
 }
 .loader {
     border: 4px solid #f3f3f3;
@@ -364,6 +365,12 @@ body.dark .notification-close:hover {
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: relative;
+    overflow: hidden; /* Garante que o filtro não vaze */
+}
+
+body.dark #map-container .leaflet-tile-pane {
+    /* Inverte as cores para criar um tema escuro, ajusta o matiz, brilho e contraste para melhor visualização */
+    filter: invert(80%) hue-rotate(1076deg) brightness(160%) contrast(120%) saturate(180%);
 }
 #map-container.visible {
     height: 60vh;
@@ -474,8 +481,8 @@ body.dark .notification-close:hover {
 }
 
 body.dark .modal-button.register {
-    background-color: #4a5568;
-    color: #e2e8f0;
+    background-color: #4a5568; /* Cor de fundo do botão de registro (escuro) */
+    color: #e2e8f0; /* Cor do texto do botão de registro (escuro) */
 }
 
 .autocomplete-suggestions {
@@ -493,8 +500,12 @@ body.dark .modal-button.register {
 .autocomplete-suggestions div {
     padding: 0.75rem;
     cursor: pointer;
-    border-bottom: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    border-bottom: 1px solid #9ca3af; /* Ajustado para um cinza mais escuro para melhor visibilidade no tema claro */
     font-size: 0.9rem;
+    background-color: var(--bg-panel); /* Garante que o fundo do item use a cor do painel */
+    color: var(--text-color); /* Garante que o texto do item use a cor do texto principal */
 }
 .autocomplete-suggestions div:last-child {
     border-bottom: none;
@@ -517,4 +528,39 @@ body.dark .modal-button.register {
     to {
         transform: translateY(0);
     }
+}
+
+/* Ajuste da cor da fonte para a lista de recentes no tema claro */
+#destination-history-list button {
+    color: #1f2937; /* Cor do texto principal para o tema claro */
+}
+
+
+/* Ajuste da cor da fonte para a lista de recentes no tema escuro */
+body.dark #destination-history-list button {
+    color: var(--text-color); /* Cor do texto principal para o tema escuro */
+}
+
+/* Ajuste da cor de hover para a lista de recentes no tema claro */
+#destination-history-list button:hover {
+    color: #e5e7eb; /* Cor de fundo de hover para o tema claro */
+}
+
+/* Ajuste da cor de hover para a lista de recentes no tema escuro */
+body.dark #destination-history-list button:hover {
+    background-color: #374151; /* Cor de fundo de hover para o tema escuro */
+}
+
+#destination-history {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px; /* Ajuste este valor conforme necessário */
 }

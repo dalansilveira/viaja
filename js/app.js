@@ -2,9 +2,9 @@ import { dom } from './dom.js';
 import * as state from './state.js';
 import { debounce, formatTime, formatPlaceForDisplay, estimateFare } from './utils.js';
 import { getLocationByIP, reverseGeocode } from './api.js';
-import { initializeMap, addOrMoveMarker, traceRoute } from './map.js';
+import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme } from './map.js';
 import { displayAddressSuggestions, toggleMapVisibility, switchPanel, showPushNotification, toggleTheme } from './ui.js';
-import { displayHistory } from './history.js';
+import { renderHistoryList } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
 import { setupPWA } from './pwa.js';
 
@@ -145,13 +145,19 @@ function setupEventListeners() {
         }
     });
 
-    dom.themeToggle.addEventListener('click', toggleTheme);
+    dom.themeToggle.addEventListener('click', () => {
+        toggleTheme();
+        setMapTheme(document.body.classList.contains('dark'));
+    });
+    dom.toggleMapButton.addEventListener('click', () => toggleMapVisibility(null, true));
 }
 
 async function initializeApp() {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+
+    if (isDark) {
         document.body.classList.add('dark');
     } else {
         document.body.classList.remove('dark');
@@ -159,11 +165,10 @@ async function initializeApp() {
     
     const logoElement = document.querySelector('h1 img');
     if (logoElement) {
-        const isDark = document.body.classList.contains('dark');
         logoElement.src = isDark ? 'imgs/logodark.png' : 'imgs/logo.png';
     }
     
-    displayHistory();
+    renderHistoryList();
     setupEventListeners();
     setupAuthEventListeners();
     setupPWA();
@@ -171,10 +176,10 @@ async function initializeApp() {
     const ipLocation = await getLocationByIP();
     if (ipLocation) {
         state.setCurrentUserCoords(ipLocation);
-        initializeMap(ipLocation.lat, ipLocation.lng);
+        initializeMap(ipLocation.lat, ipLocation.lng, isDark);
     } else {
         showPushNotification("Não foi possível obter a localização. Usando localização padrão.", "warning", 4000);
-        initializeMap(state.defaultCoords[0], state.defaultCoords[1]);
+        initializeMap(state.defaultCoords[0], state.defaultCoords[1], isDark);
     }
 }
 

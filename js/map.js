@@ -3,23 +3,43 @@ import { dom } from './dom.js';
 import { handleMapClick } from './ui.js';
 import { formatTime, estimateFare } from './utils.js';
 
+let currentTileLayer;
+
+/**
+ * Define o tema do mapa (claro ou escuro).
+ * @param {boolean} isDark - True para tema escuro, false para tema claro.
+ */
+export function setMapTheme(isDark) {
+    if (!state.map) return;
+
+    if (currentTileLayer) {
+        state.map.removeLayer(currentTileLayer);
+    }
+
+    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+    currentTileLayer = L.tileLayer(tileUrl, {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(state.map);
+}
+
 /**
  * Inicializa o mapa com as coordenadas fornecidas.
  * @param {number} lat - Latitude inicial.
  * @param {number} lng - Longitude inicial.
+ * @param {boolean} isDark - Se o tema inicial deve ser escuro.
  */
-export function initializeMap(lat, lng) {
+export function initializeMap(lat, lng, isDark) {
     if (state.map) {
         state.map.remove();
     }
     const mapInstance = L.map('map').setView([lat, lng], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(mapInstance);
+    state.setMap(mapInstance);
+
+    setMapTheme(isDark);
 
     mapInstance.on('click', handleMapClick);
-    state.setMap(mapInstance);
 }
 
 /**
