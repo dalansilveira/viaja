@@ -76,7 +76,7 @@ export function renderHistoryList() {
 
     const itemsToDisplay = showFavoritesOnly ? favorites : history;
 
-    if (itemsToDisplay.length > 0) {
+    if (history.length > 0 || favorites.length > 0) {
         dom.destinationHistory.classList.remove('hidden');
         itemsToDisplay.forEach(place => {
             const isFavorite = favorites.some(item => item.place_id === place.place_id);
