@@ -538,6 +538,21 @@
             color: white;
         }
 
+        /* Estilos para o banner de instalação do PWA */
+        #install-banner.visible {
+            display: flex;
+            animation: slide-up 0.5s ease-out forwards;
+        }
+
+        @keyframes slide-up {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
     </style>
 </head>
 <body class="pwa-container">
@@ -754,6 +769,15 @@
         </div>
     </main>
 
+    <!-- Banner de Instalação PWA -->
+    <div id="install-banner" class="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4 shadow-lg hidden items-center justify-center gap-4" style="z-index: 2000;">
+        <img src="logo.png" alt="Logo Via Já" class="w-8 h-8">
+        <span class="font-semibold">Instale o app para uma melhor experiência!</span>
+        <button id="install-button" class="bg-white text-blue-600 font-bold py-2 px-4 rounded-lg shadow-md hover:bg-gray-200 transition">
+            Instalar
+        </button>
+    </div>
+
     <!-- Rodapé -->
     <footer class="mt-auto py-4 text-center text-xs text-gray-500">
        Via Já - Todos os Direitos Reservados ®
@@ -770,6 +794,7 @@
         let currentOrigin = null;
         let currentDestination = null;
         let currentSelectionMode = null;
+        let deferredPrompt = null;
         let mapMessageTimeout;
         let tripData = {
             distance: 0,
@@ -849,7 +874,10 @@
             confirmNewPasswordInput: document.getElementById('confirm-new-password-input'),
             resetPasswordButton: document.getElementById('reset-password-button'),
             backToLoginFromVerifyButton: document.getElementById('back-to-login-from-verify-button'),
-            verifyErrorMessage: document.getElementById('verify-error-message')
+            verifyErrorMessage: document.getElementById('verify-error-message'),
+
+            installBanner: document.getElementById('install-banner'),
+            installButton: document.getElementById('install-button')
         };
         
         // Definição das tarifas de transporte
@@ -1653,6 +1681,45 @@
         // Adiciona o evento para abrir o modal diretamente, já que o Firebase está desativado
         dom.authButton.addEventListener('click', () => {
             dom.loginModal.classList.add('visible');
+        });
+
+        // --- Lógica de Instalação do PWA ---
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Previne o mini-infobar padrão do Chrome/Edge
+            e.preventDefault();
+            // Guarda o evento para que possa ser acionado mais tarde.
+            deferredPrompt = e;
+
+            // Condições para mostrar o banner:
+            // 1. Apenas em dispositivos móveis.
+            // 2. Apenas se o app ainda não estiver instalado (não rodando em modo standalone).
+            const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+            if (isMobile && !isStandalone) {
+                dom.installBanner.classList.remove('hidden');
+                dom.installBanner.classList.add('visible');
+            }
+        });
+
+        dom.installButton.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+
+            // Esconde nosso banner personalizado
+            dom.installBanner.classList.remove('visible');
+            dom.installBanner.classList.add('hidden');
+
+            // Mostra o prompt de instalação do navegador
+            deferredPrompt.prompt();
+
+            // O prompt só pode ser usado uma vez. Limpamos a variável.
+            deferredPrompt = null;
+        });
+
+        window.addEventListener('appinstalled', () => {
+            // Limpa o prompt se o app for instalado por outros meios.
+            deferredPrompt = null;
         });
 
         // Inicialização do aplicativo
