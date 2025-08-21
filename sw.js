@@ -35,15 +35,12 @@ self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          // Se o nome do cache não estiver na lista de permissões, ele é deletado.
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Deletando cache antigo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
+      return Promise.all(cacheNames
+        .filter(cacheName => !cacheWhitelist.includes(cacheName))
+        .map(cacheName => {
+          console.log('Deletando cache antigo:', cacheName);
+          return caches.delete(cacheName);
+        }));
     })
   );
 });
