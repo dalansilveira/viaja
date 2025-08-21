@@ -3,9 +3,8 @@ const CACHE_NAME = 'viaja-app-cache-v1';
 // a partir da raiz do domínio, incluindo o nome do repositório.
 const urlsToCache = [
   '/viaja/',
-  '/viaja/teste.html',
-  '/viaja/logo.png',
-  '/viaja/logodark.png',
+  '/viaja/imgs/logo.png',
+  '/viaja/imgs/logodark.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css',

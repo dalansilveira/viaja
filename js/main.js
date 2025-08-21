@@ -18,7 +18,7 @@ function createSplashWindow() {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
-    icon: path.join(__dirname, 'logo.png'),
+    icon: path.join(__dirname, '..', 'imgs/logo.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload-splash.js')
     }
@@ -39,7 +39,7 @@ function createWindow() {
     height: savedBounds.height,
     minWidth: 450,
     minHeight: 700,
-    icon: path.join(__dirname, 'logo.png'), // Adiciona um ícone à janela
+    icon: path.join(__dirname, '..', 'imgs/logo.png'), // Adiciona um ícone à janela
     show: false, // Importante: não mostrar a janela principal imediatamente
     webPreferences: {
       // preload: path.join(__dirname, 'preload.js')

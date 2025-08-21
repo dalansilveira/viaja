@@ -2,7 +2,7 @@
   "name": "viaja-app",
   "version": "1.0.0",
   "description": "Aplicativo de transporte ViaJá",
-  "main": "main.js",
+  "main": "js/main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"
@@ -12,16 +12,18 @@
     "productName": "ViaJá",
     "files": [
       "index.html",
-      "main.js",
-      "logo.png",
-      "logodark.png",
+      "js/main.js",
+      "imgs/logo.png",
+      "imgs/logodark.png",
       "splash.html",
-      "preload-splash.js",
-      "sw.js"
+      "js/preload-splash.js",
+      "js/sw.js",
+      "js/preload.js",
+      "js/renderer.js"
     ],
     "win": {
       "target": "nsis",
-      "icon": "logo.png"
+      "icon": "imgs/logo.png"
     }
   },
   "keywords": [],
