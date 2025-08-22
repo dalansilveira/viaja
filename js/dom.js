@@ -36,8 +36,8 @@ export const dom = {
     authText: document.getElementById('auth-text'),
     authMenuButton: document.getElementById('auth-menu-button'),
     authMenu: document.getElementById('auth-menu'),
-    authMenuLogin: document.getElementById('auth-menu-login'),
     authMenuProfile: document.getElementById('auth-menu-profile'),
+    authMenuPreferences: document.getElementById('auth-menu-preferences'),
     authMenuLogout: document.getElementById('auth-menu-logout'),
     authMenuHelp: document.getElementById('auth-menu-help'),
     loginPhoneInput: document.getElementById('login-phone'),
@@ -56,5 +56,16 @@ export const dom = {
     activateGpsButton: document.getElementById('activate-gps-button'),
     cancelGpsButton: document.getElementById('cancel-gps-button'),
     welcomeModal: document.getElementById('welcome-modal'),
-    continueWithoutLoginButton: document.getElementById('continue-without-login-button')
+    continueWithoutLoginButton: document.getElementById('continue-without-login-button'),
+    googleLoginButton: document.getElementById('google-login-button'),
+    profileModal: document.getElementById('profile-modal'),
+    closeProfileModalButton: document.getElementById('close-profile-modal-button'),
+    profilePicture: document.getElementById('profile-picture'),
+    profilePictureInput: document.getElementById('profile-picture-input'),
+    deleteProfilePictureButton: document.getElementById('delete-profile-picture-button'),
+    profileName: document.getElementById('profile-name'),
+    profilePhone: document.getElementById('profile-phone'),
+    profileAddress: document.getElementById('profile-address'),
+    profileNeighborhood: document.getElementById('profile-neighborhood'),
+    saveProfileButton: document.getElementById('save-profile-button')
 };

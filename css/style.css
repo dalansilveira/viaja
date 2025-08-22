@@ -131,7 +131,32 @@ body {
 }
 
 #auth-menu {
+    background-color: var(--bg-panel);
     transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+    z-index: 1010; /* Garante que o menu fique acima do mapa e outros elementos */
+}
+
+#auth-menu a {
+    color: var(--text-color);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+#auth-menu a:hover {
+    background-color: #3b82f6;
+    color: white;
+}
+
+body.dark #auth-menu a:hover {
+    background-color: #3b82f6;
+    color: white;
+}
+
+#theme-toggle:hover, #toggle-map-button:hover, #auth-menu-button:hover {
+    background-color: #e5e7eb;
+}
+
+body.dark #theme-toggle:hover, body.dark #toggle-map-button:hover, body.dark #auth-menu-button:hover {
+    background-color: #4a5568;
 }
 .button-submit, .button-clear, .vehicle-button {
     width: 100%;
@@ -403,8 +428,19 @@ body.dark .notification-close:hover {
 }
 
 .pin-shadow {
-    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.7)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+    filter: drop-shadow(1px 1px 0px rgba(0, 0, 0, 0.7)) 
+            drop-shadow(-1px -1px 0px rgba(0, 0, 0, 0.7)) 
+            drop-shadow(1px -1px 0px rgba(0, 0, 0, 0.7)) 
+            drop-shadow(-1px 1px 0px rgba(0, 0, 0, 0.7));
 }
+
+body.dark .pin-shadow {
+    filter: drop-shadow(1px 1px 0px rgba(255, 255, 255, 0.8)) 
+            drop-shadow(-1px -1px 0px rgba(255, 255, 255, 0.8)) 
+            drop-shadow(1px -1px 0px rgba(255, 255, 255, 0.8)) 
+            drop-shadow(-1px 1px 0px rgba(255, 255, 255, 0.8));
+}
+
 #map-container {
     height: 0;
     opacity: 0;
@@ -414,6 +450,7 @@ body.dark .notification-close:hover {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden; /* Garante que o filtro não vaze */
+    z-index: 1; /* Garante que o mapa fique abaixo dos modais */
 }
 
 body.dark #map-container .leaflet-tile-pane {
@@ -487,6 +524,21 @@ body.dark #map-container .leaflet-tile-pane {
     border: 1px solid var(--border-color);
     background-color: var(--bg-input);
     color: var(--text-color);
+}
+
+.login-input[readonly] {
+    background-color: #e5e7eb; /* Cinza claro para indicar que está desabilitado */
+    color: #6b7280; /* Cor de texto mais esmaecida */
+    cursor: not-allowed; /* Cursor para indicar que não é clicável */
+    user-select: none; /* Impede a seleção do texto */
+    -webkit-user-select: none; /* Para compatibilidade com Safari */
+    -moz-user-select: none; /* Para compatibilidade com Firefox */
+    -ms-user-select: none; /* Para compatibilidade com IE */
+}
+
+body.dark .login-input[readonly] {
+    background-color: #374151; /* Cinza mais escuro para o tema escuro */
+    color: #9ca3af;
 }
 
 .login-buttons-container {

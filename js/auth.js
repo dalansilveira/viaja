@@ -1,15 +1,11 @@
 import { dom } from './dom.js';
 import { showPushNotification } from './ui.js';
+import { formatPhoneNumber } from './utils.js';
 
 export function setupAuthEventListeners() {
     dom.authMenuButton.addEventListener('click', (e) => {
         e.stopPropagation();
         dom.authMenu.classList.toggle('hidden');
-    });
-
-    dom.authMenuLogin.addEventListener('click', () => {
-        dom.authMenu.classList.add('hidden');
-        dom.welcomeModal.style.display = 'flex';
     });
 
     document.addEventListener('click', (e) => {
@@ -19,13 +15,62 @@ export function setupAuthEventListeners() {
     });
 
     dom.authMenuProfile.addEventListener('click', () => {
-        showPushNotification("Função de perfil ainda não implementada.", "info");
+        dom.authMenu.classList.add('hidden');
+        dom.profileModal.classList.remove('hidden');
+        // Preencher o telefone do usuário se estiver logado
+        const userPhone = localStorage.getItem('user_phone');
+        if (userPhone) {
+            dom.profilePhone.value = formatPhoneNumber(userPhone);
+        }
+    });
+
+    dom.closeProfileModalButton.addEventListener('click', () => {
+        dom.profileModal.classList.add('hidden');
+    });
+
+    dom.saveProfileButton.addEventListener('click', () => {
+        showPushNotification("Perfil salvo com sucesso!", "success");
+        dom.profileModal.classList.add('hidden');
+    });
+
+    dom.profilePictureInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                dom.profilePicture.src = e.target.result;
+                dom.profilePicture.classList.remove('hidden');
+                document.getElementById('profile-placeholder-svg').classList.add('hidden');
+                dom.deleteProfilePictureButton.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    dom.deleteProfilePictureButton.addEventListener('click', () => {
+        dom.profilePicture.src = '';
+        dom.profilePicture.classList.add('hidden');
+        document.getElementById('profile-placeholder-svg').classList.remove('hidden');
+        dom.deleteProfilePictureButton.classList.add('hidden');
+        dom.profilePictureInput.value = ''; // Limpa o input de arquivo
+    });
+
+    dom.authMenuPreferences.addEventListener('click', () => {
+        showPushNotification("Função de preferências ainda não implementada.", "info");
         dom.authMenu.classList.add('hidden');
     });
 
     dom.authMenuLogout.addEventListener('click', () => {
+        // Remove todos os dados do usuário do localStorage
         localStorage.removeItem('user_token');
-        window.location.reload();
+        localStorage.removeItem('user_phone');
+        // Adicionar aqui a remoção de outros dados de perfil, se houver (ex: 'user_profile')
+        
+        showPushNotification("Você foi desconectado.", "info");
+        
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
     });
 
     dom.authMenuHelp.addEventListener('click', () => {
@@ -33,13 +78,39 @@ export function setupAuthEventListeners() {
         dom.authMenu.classList.add('hidden');
     });
 
+    dom.googleLoginButton.addEventListener('click', () => {
+        showPushNotification("Login com Google ainda não implementado.", "info");
+    });
+
+    dom.loginPhoneInput.addEventListener('input', (e) => {
+        const input = e.target;
+        let value = input.value.replace(/\D/g, '');
+        
+        if (value.length > 11) {
+            value = value.slice(0, 11);
+        }
+
+        if (value.length > 10) { // Celular com 9º dígito
+            value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+        } else if (value.length > 6) { // Celular com 8 dígitos ou Fixo
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d*)/, '($1) $2');
+        } else {
+            value = value.replace(/^(\d*)/, '($1');
+        }
+        
+        input.value = value;
+    });
+
     dom.loginButton.addEventListener('click', () => {
-        const phone = dom.loginPhoneInput.value.trim();
-        if (!phone) {
-            dom.loginErrorMessage.textContent = 'Por favor, insira seu telefone.';
+        const phone = dom.loginPhoneInput.value.trim().replace(/\D/g, '');
+        if (phone.length < 10 || phone.length > 11) {
+            dom.loginErrorMessage.textContent = 'Por favor, insira um telefone válido.';
             return;
         }
-        showPushNotification(`Enviando código para ${phone}...`, "info");
+        showPushNotification(`Enviando código para ${formatPhoneNumber(phone)}...`, "info");
+        localStorage.setItem('user_phone', phone); // Salva o telefone para usar no perfil
         // Simula o envio do código e a transição para a tela de verificação
         setTimeout(() => {
             dom.welcomeModal.style.display = 'none';

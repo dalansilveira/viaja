@@ -38,18 +38,30 @@
 </head>
 <body>
     <!-- Modais fora do contêiner principal -->
-    <div id="welcome-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-sm mx-4 w-full">
-            <div class="text-center">
-                <img src="imgs/logo.png" alt="Logo Via Já" class="w-24 h-24 mx-auto mb-4" id="welcome-logo">
-                <h2 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Bem-vindo ao Via Já!</h2>
-                <p class="text-gray-600 dark:text-gray-300 mb-6">Acesse sua conta para continuar.</p>
+    <div id="welcome-modal" class="fixed inset-0 z-50">
+        <div class="bg-white dark:bg-gray-800 w-full h-full flex flex-col items-center justify-center p-4">
+            <div class="text-center w-full max-w-[15rem]">
+                <img src="imgs/logo.png" alt="Logo Via Já" class="w-48 h-48 mx-auto mb-4" id="welcome-logo">
+                <h2 class="text-xl font-bold mb-2 text-gray-800 dark:text-white">Bem-vindo ao Via Já!</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Acesse sua conta para continuar.</p>
             </div>
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-2 w-full max-w-[15rem]">
                 <input id="login-phone" type="tel" placeholder="Telefone" class="login-input" aria-label="Telefone">
                 <button id="login-button" class="modal-button login">Enviar Código</button>
                 <p id="login-error-message" class="text-red-500 text-sm text-center"></p>
-                <button id="continue-without-login-button" class="text-xs text-gray-500 hover:underline mt-4">Continuar sem login</button>
+                
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+                    <span class="flex-shrink mx-4 text-gray-400 text-xs">OU</span>
+                    <div class="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+
+                <button id="google-login-button" class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition flex items-center justify-center gap-2">
+                    <img src="https://www.google.com/favicon.ico" alt="Google logo" class="w-4 h-4">
+                    <span>Entrar com Google</span>
+                </button>
+
+                <button id="continue-without-login-button" class="text-xs text-gray-500 hover:underline mt-2">Continuar sem login</button>
             </div>
         </div>
     </div>
@@ -89,6 +101,61 @@
         </button>
     </div>
 
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="login-content">
+            <button id="close-profile-modal-button" class="close-modal">&times;</button>
+            <h2 class="text-xl font-bold text-center">Meu Perfil</h2>
+            
+            <div class="flex flex-col items-center gap-4 w-full">
+                <!-- Profile Picture -->
+                <div class="relative">
+                    <div id="profile-picture-container" class="w-24 h-24 rounded-full border-4 border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-gray-100 dark:bg-gray-700">
+                        <svg id="profile-placeholder-svg" class="w-20 h-20 text-gray-500 dark:text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="50" cy="25" r="10" />
+                            <line x1="50" y1="35" x2="50" y2="65" />
+                            <line x1="50" y1="65" x2="35" y2="90" />
+                            <line x1="50" y1="65" x2="65" y2="90" />
+                            <line x1="50" y1="45" x2="30" y2="60" />
+                            <line x1="50" y1="45" x2="75" y2="20" />
+                        </svg>
+                        <img id="profile-picture" src="" alt="Foto do Perfil" class="w-full h-full object-cover hidden">
+                    </div>
+                    <div class="absolute bottom-0 right-0 flex items-center">
+                        <button id="delete-profile-picture-button" class="hidden bg-red-600 text-white rounded-full p-1 cursor-pointer hover:bg-red-700 mr-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <label for="profile-picture-input" class="bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                            </svg>
+                        </label>
+                    </div>
+                    <input type="file" id="profile-picture-input" class="hidden" accept="image/*">
+                </div>
+
+                <!-- Full Name -->
+                <input id="profile-name" type="text" placeholder="Nome Completo" class="login-input">
+
+                <!-- Address -->
+                <input id="profile-address" type="text" placeholder="Endereço" class="login-input">
+
+                <!-- Neighborhood -->
+                <input id="profile-neighborhood" type="text" placeholder="Bairro" class="login-input">
+                
+                <!-- Phone Number -->
+                <input id="profile-phone" type="tel" placeholder="Telefone" class="login-input" readonly>
+            </div>
+
+            <div class="login-buttons-container mt-4">
+                <button id="save-profile-button" class="modal-button login">Salvar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Contêiner principal da aplicação -->
     <div class="pwa-container">
         <header class="header flex-shrink-0 mb-4">
@@ -97,12 +164,12 @@
                 Via Já
             </h1>
             <div class="flex items-center gap-4">
-                <button id="theme-toggle" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                <button id="theme-toggle" class="p-2 rounded-lg transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
                     </svg>
                 </button>
-                <button id="toggle-map-button" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                <button id="toggle-map-button" class="p-2 rounded-lg transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
                         <line x1="8" y1="2" x2="8" y2="18"></line>
@@ -110,16 +177,16 @@
                     </svg>
                 </button>
                 <div class="relative">
-                    <button id="auth-menu-button" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+                    <button id="auth-menu-button" class="p-2 rounded-lg transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <div id="auth-menu" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
-                        <a href="#" id="auth-menu-login" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">Entrar</a>
-                        <a href="#" id="auth-menu-profile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">Perfil</a>
-                        <a href="#" id="auth-menu-logout" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">Desconectar</a>
-                        <a href="#" id="auth-menu-help" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">Ajuda e Suporte</a>
+                    <div id="auth-menu" class="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-20 hidden">
+                        <a href="#" id="auth-menu-profile" class="block px-4 py-2 text-sm rounded-md">Perfil</a>
+                        <a href="#" id="auth-menu-preferences" class="block px-4 py-2 text-sm rounded-md">Preferências</a>
+                        <a href="#" id="auth-menu-logout" class="block px-4 py-2 text-sm rounded-md">Desconectar</a>
+                        <a href="#" id="auth-menu-help" class="block px-4 py-2 text-sm rounded-md">Ajuda e Suporte</a>
                     </div>
                 </div>
             </div>
@@ -265,50 +332,3 @@
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
-
-</final_file_content>
-
-IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
-
-<environment_details>
-# VSCode Visible Files
-index.html
-
-# VSCode Open Tabs
-sw.js
-manifest.json
-js/destinations.js
-js/state.js
-js/map.js
-js/history.js
-js/ui.js
-css/style.css
-js/dom.js
-js/auth.js
-js/utils.js
-js/app.js
-index.html
-js/main.js
-js/sw.js
-api.js
-state.js
-dom.js
-ui.js
-history.js
-auth.js
-pwa.js
-utils.js
-map.js
-app.js
-js/api.js
-js/pwa.js
-
-# Current Time
-22/08/2025, 5:15:29 AM (America/Sao_Paulo, UTC-3:00)
-
-# Context Window Usage
-520.125 / 1.048,576K tokens used (50%)
-
-# Current Mode
-ACT MODE
-</environment_details>

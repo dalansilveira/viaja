@@ -102,3 +102,19 @@ export function estimateFare(distanceKm, vehicleType) {
 export function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
+
+/**
+ * Formata um número de telefone no padrão (xx) xxxxx-xxxx.
+ * @param {string} phone - O número de telefone a ser formatado.
+ * @returns {string} O número de telefone formatado.
+ */
+export function formatPhoneNumber(phone) {
+    const cleaned = ('' + phone).replace(/\D/g, '');
+    if (cleaned.length === 11) {
+        return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+    if (cleaned.length === 10) {
+        return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+    return phone;
+}

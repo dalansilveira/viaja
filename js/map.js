@@ -157,15 +157,14 @@ export function traceRoute() {
 
     const isDarkMode = document.body.classList.contains('dark');
     const routeColor = isDarkMode ? '#FFD700' : '#3b82f6';
+    const casingColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.6)';
 
     const control = L.Routing.control({
         waypoints: waypoints,
         lineOptions: {
             styles: [
-                // Contorno (casing)
-                { color: 'black', opacity: 0.3, weight: 12 },
-                // Linha principal
-                { color: routeColor, weight: 9, opacity: 0.8 }
+                { color: casingColor, opacity: 1, weight: 7 },
+                { color: routeColor, weight: 4, opacity: 1 }
             ]
         },
         createMarker: function() { return null; },
