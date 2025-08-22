@@ -108,26 +108,28 @@ body {
 
 .input-group-origin {
     border: 1px solid #93c5fd; /* Azul mais claro */
-    border-left: 10px solid #93c5fd; /* Azul mais claro */
-    padding-left: 0.5rem;
-    transition: border-color 0.3s ease, border-left-color 0.3s ease;
+    border-left: none;
+    box-shadow: inset 20px 0 0 0 #93c5fd;
+    padding-left: calc(20px + 0.5rem);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .input-group-destination {
     border: 1px solid #86efac; /* Verde mais claro */
-    border-left: 10px solid #86efac; /* Verde mais claro */
-    padding-left: 0.5rem;
-    transition: border-color 0.3s ease, border-left-color 0.3s ease;
+    border-left: none;
+    box-shadow: inset 20px 0 0 0 #86efac;
+    padding-left: calc(20px + 0.5rem);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .input-group-origin.input-filled {
     border-color: #3b82f6; /* Azul vibrante */
-    border-left-color: #3b82f6; /* Azul vibrante */
+    box-shadow: inset 20px 0 0 0 #3b82f6;
 }
 
 .input-group-destination.input-filled {
     border-color: #22ac54; /* Verde vibrante */
-    border-left-color: #22ac54; /* Verde vibrante */
+    box-shadow: inset 20px 0 0 0 #22ac54;
 }
 
 #auth-menu {
@@ -631,24 +633,28 @@ body.dark .modal-button.register {
 }
 
 /* Ajuste da cor da fonte para a lista de recentes no tema claro */
-#destination-history-list button {
+#destination-history-list button, #destination-favorites-list button {
     color: #1f2937; /* Cor do texto principal para o tema claro */
 }
 
 
 /* Ajuste da cor da fonte para a lista de recentes no tema escuro */
-body.dark #destination-history-list button {
+body.dark #destination-history-list button, body.dark #destination-favorites-list button {
     color: var(--text-color); /* Cor do texto principal para o tema escuro */
 }
 
-/* Ajuste da cor de hover para a lista de recentes no tema claro */
-#destination-history-list button:hover {
-    color: #e5e7eb; /* Cor de fundo de hover para o tema claro */
+.history-list-item {
+    color: var(--text-muted);
 }
 
-/* Ajuste da cor de hover para a lista de recentes no tema escuro */
-body.dark #destination-history-list button:hover {
-    background-color: #374151; /* Cor de fundo de hover para o tema escuro */
+.history-list-item:hover {
+    background-color: #bae6fd; /* Azul claro (sky-200) */
+    color: #0c4a6e; /* Azul escuro (sky-900) */
+}
+
+body.dark .history-list-item:hover {
+    background-color: #374151; /* Cor de fundo de hover para o modo escuro (cinza-700) */
+    color: #f3f4f6; /* Cor do texto de hover para o modo escuro (cinza-100) */
 }
 
 #destination-history {
@@ -656,6 +662,44 @@ body.dark #destination-history-list button:hover {
     border-radius: 0.5rem;
     padding: 0.5rem;
     margin-top: 0.5rem;
+}
+
+.tabs-container {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+}
+
+.tab-button {
+    flex: 1; /* Faz com que as abas dividam o espaço igualmente */
+    padding: 0.4rem 0.8rem; /* Tamanho reduzido */
+    cursor: pointer;
+    border: none;
+    background-color: transparent;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.9rem; /* Fonte um pouco menor */
+    transition: color 0.3s, border-bottom 0.3s;
+    border-bottom: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem; /* Espaço entre o ícone e o texto */
+}
+
+.tab-button.active {
+    color: var(--text-color);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tab-content {
+    display: none;
+    padding: 0.5rem;
+    animation: fadeIn 0.5s;
+}
+
+.tab-content.active {
+    display: block;
 }
 
 .truncate {

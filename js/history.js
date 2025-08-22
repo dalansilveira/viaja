@@ -33,17 +33,21 @@ export function toggleFavorite(place) {
     const isFavorite = favorites.some(item => item.place_id === place.place_id);
 
     if (isFavorite) {
-        favorites = favorites.filter(item => item.place_id !== place.place_id);
+        showConfirmationModal(`Tem certeza de que deseja remover "${place.display_name}" dos favoritos?`, () => {
+            favorites = favorites.filter(item => item.place_id !== place.place_id);
+            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+            renderHistoryList();
+        });
     } else {
         if (favorites.length < 5) { // Limita a 5 favoritos
             favorites.push(place);
+            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+            renderHistoryList(); // Atualiza a exibição para refletir a mudança
         } else {
             // Opcional: Notificar o usuário que o limite foi atingido
             console.warn('Limite de 5 favoritos atingido.');
         }
     }
-    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
-    renderHistoryList(); // Atualiza a exibição para refletir a mudança
 }
 
 /**
@@ -52,9 +56,14 @@ export function toggleFavorite(place) {
  */
 export function deleteHistoryItem(placeId) {
     let history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
-    history = history.filter(item => item.place_id !== placeId);
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-    renderHistoryList(); // Atualiza a exibição
+    const itemToDelete = history.find(item => item.place_id === placeId);
+    if (!itemToDelete) return;
+
+    showConfirmationModal(`Tem certeza de que deseja remover "${itemToDelete.display_name}" do histórico?`, () => {
+        history = history.filter(item => item.place_id !== placeId);
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+        renderHistoryList(); // Atualiza a exibição
+    });
 }
 
 /**
@@ -72,22 +81,34 @@ export function toggleShowFavorites(showFavorites) {
 export function renderHistoryList() {
     const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
     const favorites = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY)) || [];
+    
+    // Limpa ambas as listas antes de renderizar
     dom.destinationHistoryList.innerHTML = '';
+    if (dom.destinationFavoritesList) {
+        dom.destinationFavoritesList.innerHTML = '';
+    }
 
+    const listContainer = showFavoritesOnly ? dom.destinationFavoritesList : dom.destinationHistoryList;
     const itemsToDisplay = showFavoritesOnly ? favorites : history;
 
     if (history.length > 0 || favorites.length > 0) {
         dom.destinationHistory.classList.remove('hidden');
+        
+        if (itemsToDisplay.length === 0) {
+            listContainer.innerHTML = `<p class="text-center text-sm text-gray-500 dark:text-gray-400 p-4">Nenhum item encontrado.</p>`;
+            return;
+        }
+
         itemsToDisplay.forEach(place => {
             const isFavorite = favorites.some(item => item.place_id === place.place_id);
             const historyItem = document.createElement('div');
-            historyItem.className = `flex items-center justify-between p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-600 dark:text-gray-300 w-full ${showFavoritesOnly ? 'favorite-item' : ''}`;
+            historyItem.className = `history-list-item flex items-center justify-between p-2 rounded-md text-sm w-full ${showFavoritesOnly ? 'favorite-item' : ''}`;
             historyItem.innerHTML = `
                 <button type="button" class="flex items-center gap-2 text-left flex-grow" data-place-id="${place.place_id}">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-gray-400 flex-shrink-0">
-  <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-</svg>
-<span class="truncate" title="${place.display_name}">${place.display_name}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-gray-400 flex-shrink-0">
+                      <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="truncate" title="${place.display_name}">${place.display_name}</span>
                 </button>
                 <div class="flex items-center gap-2">
                     <button type="button" class="favorite-button p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" data-place-id="${place.place_id}">
@@ -109,9 +130,13 @@ export function renderHistoryList() {
             });
             historyItem.querySelector('.delete-button').addEventListener('click', (e) => {
                 e.stopPropagation();
-                deleteHistoryItem(place.place_id);
+                if (showFavoritesOnly) {
+                    toggleFavorite(place); // Reutiliza a lógica de toggle, que agora tem confirmação
+                } else {
+                    deleteHistoryItem(place.place_id);
+                }
             });
-            dom.destinationHistoryList.appendChild(historyItem);
+            listContainer.appendChild(historyItem);
         });
     } else {
         dom.destinationHistory.classList.add('hidden');
@@ -137,4 +162,35 @@ function handleHistorySelection(place) {
     if (!dom.mapContainer.classList.contains('visible')) {
         toggleMapVisibility(true);
     }
+}
+
+/**
+ * Exibe o modal de confirmação.
+ * @param {string} message - A mensagem a ser exibida no modal.
+ * @param {function} onConfirm - A função a ser executada na confirmação.
+ */
+function showConfirmationModal(message, onConfirm) {
+    const modal = document.getElementById('confirmation-modal');
+    const messageEl = document.getElementById('confirmation-message');
+    const confirmBtn = document.getElementById('confirm-button');
+    const cancelBtn = document.getElementById('cancel-button-modal');
+
+    messageEl.textContent = message;
+    modal.classList.remove('hidden');
+
+    const confirmHandler = () => {
+        onConfirm();
+        modal.classList.add('hidden');
+        confirmBtn.removeEventListener('click', confirmHandler);
+        cancelBtn.removeEventListener('click', cancelHandler);
+    };
+
+    const cancelHandler = () => {
+        modal.classList.add('hidden');
+        confirmBtn.removeEventListener('click', confirmHandler);
+        cancelBtn.removeEventListener('click', cancelHandler);
+    };
+
+    confirmBtn.addEventListener('click', confirmHandler);
+    cancelBtn.addEventListener('click', cancelHandler);
 }

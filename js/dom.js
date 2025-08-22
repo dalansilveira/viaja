@@ -9,6 +9,7 @@ export const dom = {
     destinationSuggestions: document.getElementById('destination-suggestions'),
     destinationHistory: document.getElementById('destination-history'),
     destinationHistoryList: document.getElementById('destination-history-list'),
+    destinationFavoritesList: document.getElementById('destination-favorites-list'),
     showHistoryButton: document.getElementById('show-history-button'),
     showFavoritesButton: document.getElementById('show-favorites-button'),
     submitButton: document.getElementById('submit-button'),

@@ -156,8 +156,20 @@
                 <input id="profile-phone" type="tel" placeholder="Telefone" class="login-input" readonly>
             </div>
 
-            <div class="login-buttons-container mt-4">
+        <div class="login-buttons-container mt-4">
                 <button id="save-profile-button" class="modal-button login">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="login-content">
+            <h2 id="confirmation-title" class="text-xl font-bold text-center">Confirmar Remoção</h2>
+            <p id="confirmation-message" class="text-sm text-center text-gray-600 dark:text-gray-400">Tem certeza de que deseja remover este item dos favoritos?</p>
+            <div class="login-buttons-container mt-4">
+                <button id="confirm-button" class="modal-button login bg-red-600 hover:bg-red-700">Confirmar</button>
+                <button id="cancel-button-modal" class="modal-button register">Cancelar</button>
             </div>
         </div>
     </div>
@@ -208,7 +220,7 @@
             <div id="ride-request-panel" class="content-panel">
                 <form id="ride-request-form" class="ride-request-form">
                     <div class="input-group input-group-origin">
-                        <input id="origin-input" type="text" placeholder="Obtendo sua localização..." autocomplete="off" readonly>
+                        <input id="origin-input" type="text" placeholder="Meu local" autocomplete="off" readonly>
                         <div class="flex items-center gap-2">
                             <button type="button" id="current-location-button" class="select-in-field-button" title="Usar localização atual">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
@@ -229,7 +241,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 drag-handle" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                                 </svg>
-                                <input id="destination-input" type="text" placeholder="Destino" autocomplete="off" class="destination-input">
+                                <input id="destination-input" type="text" placeholder="Para onde?" autocomplete="off" class="destination-input">
                                 <div class="flex items-center gap-2">
                                     <button type="button" id="select-destination-button" class="select-in-field-button" title="Selecionar no mapa">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
@@ -247,19 +259,22 @@
                         </div>
                     </div>
                     <div id="destination-history" class="mt-2 hidden">
-                        <div class="flex justify-center gap-4 mb-4">
-                            <button id="show-history-button" type="button" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center justify-center gap-2">
+                        <div class="tabs-container">
+                            <button id="show-history-button" type="button" class="tab-button active">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414L6 10.586V12h1.414l4.293-4.293z" clip-rule="evenodd" />
                                 </svg>
+                                <span>Histórico</span>
                             </button>
-                            <button id="show-favorites-button" type="button" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50 flex items-center justify-center gap-2">
+                            <button id="show-favorites-button" type="button" class="tab-button">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.176 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.927 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
                                 </svg>
+                                <span>Favoritos</span>
                             </button>
                         </div>
-                        <div id="destination-history-list" class="flex flex-col gap-1"></div>
+                        <div id="destination-history-list" class="tab-content active"></div>
+                        <div id="destination-favorites-list" class="tab-content"></div>
                     </div>
                     <button type="button" id="clear-button" class="button-clear">Limpar</button>
                     <button type="button" id="submit-button" class="button-submit" disabled>

@@ -289,20 +289,28 @@ export function toggleTheme() {
 }
 
 // Adiciona eventos de clique aos botões de histórico e favoritos
-dom.showHistoryButton.addEventListener('click', () => {
-    toggleShowFavorites(false); // Exibe o histórico
-    dom.showHistoryButton.classList.remove('bg-gray-300', 'text-gray-800');
-    dom.showHistoryButton.classList.add('bg-blue-500', 'text-white');
-    dom.showFavoritesButton.classList.remove('bg-blue-500', 'text-white');
-    dom.showFavoritesButton.classList.add('bg-gray-300', 'text-gray-800');
-    renderHistoryList(); // Renderiza a lista de histórico
-});
+function setupTabs() {
+    const tabs = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
 
-dom.showFavoritesButton.addEventListener('click', () => {
-    toggleShowFavorites(true); // Exibe os favoritos
-    dom.showFavoritesButton.classList.remove('bg-gray-300', 'text-gray-800');
-    dom.showFavoritesButton.classList.add('bg-blue-500', 'text-white');
-    dom.showHistoryButton.classList.remove('bg-blue-500', 'text-white');
-    dom.showHistoryButton.classList.add('bg-gray-300', 'text-gray-800');
-    renderHistoryList(); // Renderiza a lista de favoritos
-});
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove a classe 'active' de todas as abas e conteúdos
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+
+            // Adiciona a classe 'active' à aba clicada e ao conteúdo correspondente
+            tab.classList.add('active');
+            const targetContentId = tab.id === 'show-history-button' ? 'destination-history-list' : 'destination-favorites-list';
+            document.getElementById(targetContentId).classList.add('active');
+
+            // Renderiza a lista apropriada
+            const showFavorites = tab.id === 'show-favorites-button';
+            toggleShowFavorites(showFavorites);
+            renderHistoryList();
+        });
+    });
+}
+
+// Chame a função para configurar as abas
+setupTabs();
