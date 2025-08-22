@@ -8,7 +8,7 @@
     --bg-input: #ffffff; /* Cor de fundo dos campos de entrada (claro) */
     --text-color: #1f2937; /* Cor do texto principal (claro) */
     --text-muted: #6b7280; /* Cor do texto secundário/desabilitado (claro) */
-    --border-color: #3b82f6; /* Cor da borda (claro) */
+    --border-color: #d1d5db; /* Cor da borda (claro) */
 }
 
 
@@ -83,59 +83,104 @@ body {
     flex-direction: column;
     gap: 1rem;
 }
+
+/* Estilos para o grupo de input */
 .input-group {
     position: relative;
     background-color: var(--bg-input);
-    padding: 0.75rem;
     border-radius: 0.5rem;
     display: flex;
     align-items: center;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border-color);
     transition: border-color 0.2s, background-color 0.2s;
+    padding: 0;
+    overflow: hidden;
 }
+
 .input-group.focus-within {
      border-color: #3b82f6;
      box-shadow: 0 0 0 2px #3B82F680;
 }
+
 .input-group input {
     width: 100%;
     background-color: transparent;
     border: none;
     outline: none;
-    padding-left: 0.5rem;
+    padding: 0.75rem;
+    padding-left: calc(15px + 0.75rem); /* Adiciona espaço para a faixa lateral */
+    resize: none;
+    overflow-y: hidden;
+    line-height: 1.5;
+    color: var(--text-color);
 }
 
 .input-group-origin {
-    border: 1px solid #93c5fd; /* Azul mais claro */
-    border-left: none;
-    box-shadow: inset 20px 0 0 0 #93c5fd;
-    padding-left: calc(20px + 0.5rem);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    border-color: #3b82f6;
+    box-shadow: inset 15px 0 0 0 #3b82f6;
 }
 
 .input-group-destination {
-    border: 1px solid #86efac; /* Verde mais claro */
-    border-left: none;
-    box-shadow: inset 20px 0 0 0 #86efac;
-    padding-left: calc(20px + 0.5rem);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    border-color: #22c55e;
+    box-shadow: inset 15px 0 0 0 #22c55e;
 }
 
-.input-group-origin.input-filled {
-    border-color: #3b82f6; /* Azul vibrante */
-    box-shadow: inset 20px 0 0 0 #3b82f6;
+.select-in-field-button {
+    background-color: transparent;
+    border: none;
+    border-left: 1px solid var(--border-color);
+    padding: 0 0.75rem;
+    cursor: pointer;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s;
 }
 
-.input-group-destination.input-filled {
-    border-color: #22ac54; /* Verde vibrante */
-    box-shadow: inset 20px 0 0 0 #22ac54;
+.select-in-field-button:hover {
+    background-color: #e5e7eb;
+}
+
+body.dark .select-in-field-button:hover {
+    background-color: #374151;
+}
+
+#select-origin-button.selection-active {
+    background-color: #3b82f6;
+    animation: pulse-bg-blue 1.5s infinite;
+}
+
+#select-destination-button.selection-active {
+    background-color: #22c55e;
+    animation: pulse-bg-green 1.5s infinite;
+}
+
+.select-in-field-button.selection-active svg {
+    color: white;
+}
+
+@keyframes pulse-bg-blue {
+    0% { background-color: #3b82f6; }
+    50% { background-color: #60a5fa; }
+    100% { background-color: #3b82f6; }
+}
+
+@keyframes pulse-bg-green {
+    0% { background-color: #22c55e; }
+    50% { background-color: #4ade80; }
+    100% { background-color: #22c55e; }
+}
+
+#splash-screen, #welcome-modal-content {
+    background-color: var(--bg-body);
+    color: var(--text-color);
 }
 
 #auth-menu {
     background-color: var(--bg-panel);
     transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
-    z-index: 1010; /* Garante que o menu fique acima do mapa e outros elementos */
+    z-index: 1010;
 }
 
 #auth-menu a {
@@ -182,10 +227,9 @@ body.dark #theme-toggle:hover, body.dark #toggle-map-button:hover, body.dark #au
     color: #4b5563;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-/* Ajuste do tema escuro para botões de limpeza e veículos */
 body.dark .button-clear {
-    background-color: #4a5568; /* Cor de fundo do botão de limpar (escuro) */
-    color: #e2e8f0; /* Cor do texto do botão de limpar (escuro) */
+    background-color: #4a5568;
+    color: #e2e8f0;
     box-shadow: 4px 6px rgba(0, 0, 0, 0.4);
 }
 .button-submit:hover, .button-clear:hover {
@@ -219,23 +263,6 @@ body.dark .button-clear {
     z-index: 1000;
     text-align: center;
     display: none;
-}
-.input-group .select-in-field-button {
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    transition: transform 0.2s;
-}
-.input-group .select-in-field-button:hover {
-    transform: scale(1.1);
-}
-.input-group .select-in-field-button svg {
-    color: #3b82f6;
 }
 .motorcycle-icon {
     transform: scaleX(-1);
@@ -373,33 +400,33 @@ body.dark .button-clear {
 
 /* Tema escuro para notificações */
 body.dark .push-notification {
-    background: #1f2937; /* Cor de fundo da notificação (escuro) */
-    border-left-color: #3b82f6; /* Cor da borda esquerda da notificação (escuro) */
+    background: #1f2937;
+    border-left-color: #3b82f6;
 }
 
 body.dark .push-notification-info {
-    border-left-color: #60a5fa; /* Cor da borda esquerda da notificação de informação (escuro) */
+    border-left-color: #60a5fa;
 }
 
 body.dark .push-notification-success {
-    border-left-color: #34d399; /* Cor da borda esquerda da notificação de sucesso (escuro) */
+    border-left-color: #34d399;
 }
 
 body.dark .push-notification-warning {
-    border-left-color: #fbbf24; /* Cor da borda esquerda da notificação de aviso (escuro) */
+    border-left-color: #fbbf24;
 }
 
 body.dark .push-notification-error {
-    border-left-color: #f87171; /* Cor da borda esquerda da notificação de erro (escuro) */
+    border-left-color: #f87171;
 }
 
 body.dark .notification-text {
-    color: #e5e7eb; /* Cor do texto da notificação (escuro) */
+    color: #e5e7eb;
 }
 
 body.dark .notification-close:hover {
-    background-color: #374151; /* Cor de fundo do botão de fechar notificação ao passar o mouse (escuro) */
-    color: #d1d5db; /* Cor do ícone de fechar notificação ao passar o mouse (escuro) */
+    background-color: #374151;
+    color: #d1d5db;
 }
 .loader {
     border: 4px solid #f3f3f3;
@@ -451,12 +478,11 @@ body.dark .pin-shadow {
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: relative;
-    overflow: hidden; /* Garante que o filtro não vaze */
-    z-index: 1; /* Garante que o mapa fique abaixo dos modais */
+    overflow: hidden;
+    z-index: 1;
 }
 
 body.dark #map-container .leaflet-tile-pane {
-    /* Inverte as cores para criar um tema escuro, ajusta o matiz, brilho e contraste para melhor visualização */
     filter: invert(80%) hue-rotate(1076deg) brightness(160%) contrast(120%) saturate(180%);
 }
 #map-container.visible {
@@ -529,17 +555,17 @@ body.dark #map-container .leaflet-tile-pane {
 }
 
 .login-input[readonly] {
-    background-color: #e5e7eb; /* Cinza claro para indicar que está desabilitado */
-    color: #6b7280; /* Cor de texto mais esmaecida */
-    cursor: not-allowed; /* Cursor para indicar que não é clicável */
-    user-select: none; /* Impede a seleção do texto */
-    -webkit-user-select: none; /* Para compatibilidade com Safari */
-    -moz-user-select: none; /* Para compatibilidade com Firefox */
-    -ms-user-select: none; /* Para compatibilidade com IE */
+    background-color: #e5e7eb;
+    color: #6b7280;
+    cursor: not-allowed;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 body.dark .login-input[readonly] {
-    background-color: #374151; /* Cinza mais escuro para o tema escuro */
+    background-color: #374151;
     color: #9ca3af;
 }
 
@@ -583,13 +609,13 @@ body.dark .login-input[readonly] {
 }
 
 body.dark .modal-button.register {
-    background-color: #4a5568; /* Cor de fundo do botão de registro (escuro) */
-    color: #e2e8f0; /* Cor do texto do botão de registro (escuro) */
+    background-color: #4a5568;
+    color: #e2e8f0;
 }
 
 .autocomplete-suggestions {
     position: relative;
-    z-index: 1001; /* Acima do mapa e outros elementos */
+    z-index: 1001;
     background-color: var(--bg-panel);
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
@@ -597,17 +623,15 @@ body.dark .modal-button.register {
     overflow-y: auto;
     margin-top: 0.25rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    display: none; /* Inicialmente oculto */
+    display: none;
 }
 .autocomplete-suggestions div {
     padding: 0.75rem;
     cursor: pointer;
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    border-bottom: 1px solid #9ca3af; /* Ajustado para um cinza mais escuro para melhor visibilidade no tema claro */
+    border-bottom: 1px solid var(--border-color);
     font-size: 0.9rem;
-    background-color: var(--bg-panel); /* Garante que o fundo do item use a cor do painel */
-    color: var(--text-color); /* Garante que o texto do item use a cor do texto principal */
+    background-color: var(--bg-panel);
+    color: var(--text-color);
 }
 .autocomplete-suggestions div:last-child {
     border-bottom: none;
@@ -632,15 +656,8 @@ body.dark .modal-button.register {
     }
 }
 
-/* Ajuste da cor da fonte para a lista de recentes no tema claro */
 #destination-history-list button, #destination-favorites-list button {
-    color: #1f2937; /* Cor do texto principal para o tema claro */
-}
-
-
-/* Ajuste da cor da fonte para a lista de recentes no tema escuro */
-body.dark #destination-history-list button, body.dark #destination-favorites-list button {
-    color: var(--text-color); /* Cor do texto principal para o tema escuro */
+    color: var(--text-color);
 }
 
 .history-list-item {
@@ -648,13 +665,13 @@ body.dark #destination-history-list button, body.dark #destination-favorites-lis
 }
 
 .history-list-item:hover {
-    background-color: #bae6fd; /* Azul claro (sky-200) */
-    color: #0c4a6e; /* Azul escuro (sky-900) */
+    background-color: #bae6fd;
+    color: #0c4a6e;
 }
 
 body.dark .history-list-item:hover {
-    background-color: #374151; /* Cor de fundo de hover para o modo escuro (cinza-700) */
-    color: #f3f4f6; /* Cor do texto de hover para o modo escuro (cinza-100) */
+    background-color: #374151;
+    color: #f3f4f6;
 }
 
 #destination-history {
@@ -671,25 +688,25 @@ body.dark .history-list-item:hover {
 }
 
 .tab-button {
-    flex: 1; /* Faz com que as abas dividam o espaço igualmente */
-    padding: 0.4rem 0.8rem; /* Tamanho reduzido */
+    flex: 1;
+    padding: 0.4rem 0.8rem;
     cursor: pointer;
     border: none;
     background-color: transparent;
     color: var(--text-muted);
     font-weight: 600;
-    font-size: 0.9rem; /* Fonte um pouco menor */
+    font-size: 0.9rem;
     transition: color 0.3s, border-bottom 0.3s;
     border-bottom: 2px solid transparent;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem; /* Espaço entre o ícone e o texto */
+    gap: 0.4rem;
 }
 
 .tab-button.active {
     color: var(--text-color);
-    border-bottom: 2px solid var(--border-color);
+    border-bottom: 2px solid #3b82f6;
 }
 
 .tab-content {
@@ -706,13 +723,13 @@ body.dark .history-list-item:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 200px; /* Ajuste este valor conforme necessário */
+    max-width: 200px;
 }
 
 /* Estilos para Drag and Drop */
 .drag-handle {
     cursor: grab;
-    color: #9ca3af; /* gray-400 */
+    color: #9ca3af;
 }
 .destination-item:first-child .drag-handle {
     display: none;
@@ -742,4 +759,33 @@ body.dark .history-list-item:hover {
     font-size: 12px;
     font-weight: bold;
     z-index: 1;
+}
+
+/* Estilos para o botão de alternância de localização */
+#toggle-location-button {
+    z-index: 1000;
+    transition: background-color 0.3s, box-shadow 0.3s;
+    width: 40px;
+    height: 40px;
+    bottom: 10px;
+    right: 10px;
+    padding: 0.5rem;
+}
+
+#toggle-location-button:hover {
+    background-color: #f3f4f6;
+}
+
+body.dark #toggle-location-button:hover {
+    background-color: #374151;
+}
+
+#toggle-location-button.active #location-toggle-icon {
+    color: #3b82f6;
+    fill: #3b82f6;
+}
+
+#toggle-location-button svg {
+    width: 1.25rem;
+    height: 1.25rem;
 }

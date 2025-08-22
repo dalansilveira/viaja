@@ -10,6 +10,9 @@ export let currentSelectionMode = null;
 export let deferredPrompt = null;
 export let currentUserCoords = null;
 export let isDraggingMarker = false;
+export let isTrackingLocation = false;
+export let locationWatchId = null;
+export let isMapVisible = false;
 
 export const tripData = {
     distance: 0,
@@ -75,9 +78,49 @@ export function setIsDraggingMarker(isDragging) {
     isDraggingMarker = isDragging;
 }
 
+export function setIsTrackingLocation(isTracking) {
+    isTrackingLocation = isTracking;
+}
+
+export function setLocationWatchId(id) {
+    locationWatchId = id;
+}
+
+export function setMapVisible(visible) {
+    isMapVisible = visible;
+}
+
 export function resetTripData() {
     tripData.distance = 0;
     tripData.time = 0;
     tripData.fare = 0;
     tripData.vehicle = '';
+    saveAppState(); // Limpa o estado salvo também
+}
+
+/**
+ * Salva o estado atual da aplicação no localStorage.
+ */
+export function saveAppState() {
+    const appState = {
+        currentOrigin,
+        currentDestination,
+        tripData,
+        isMapVisible
+    };
+    localStorage.setItem('viaja_appState', JSON.stringify(appState));
+}
+
+/**
+ * Carrega o estado da aplicação do localStorage.
+ */
+export function loadAppState() {
+    const savedState = localStorage.getItem('viaja_appState');
+    if (savedState) {
+        const appState = JSON.parse(savedState);
+        setCurrentOrigin(appState.currentOrigin);
+        setCurrentDestination(appState.currentDestination);
+        setMapVisible(appState.isMapVisible);
+        Object.assign(tripData, appState.tripData);
+    }
 }

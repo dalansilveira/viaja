@@ -1,9 +1,10 @@
 import { dom } from './dom.js';
 import * as state from './state.js';
+import { saveAppState, loadAppState } from './state.js';
 import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice } from './utils.js';
 import { getLocationByIP, reverseGeocode } from './api.js';
-import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme } from './map.js';
-import { displayAddressSuggestions, toggleMapVisibility, switchPanel, showPushNotification, toggleTheme, toggleGpsModal } from './ui.js';
+import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, startLocationTracking, stopLocationTracking } from './map.js';
+import { displayAddressSuggestions, toggleMapVisibility, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState } from './ui.js';
 import { renderHistoryList, saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
 import { setupPWA } from './pwa.js';
@@ -58,54 +59,6 @@ function clearFieldsAndMap() {
     toggleMapVisibility(false);
 }
 
-async function handleCurrentLocation() {
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            const { latitude, longitude } = position.coords;
-            state.setCurrentUserCoords({ lat: latitude, lng: longitude });
-
-            toggleMapVisibility(true);
-
-            const fullAddressData = await reverseGeocode(latitude, longitude);
-            const addressText = formatPlaceForDisplay(fullAddressData) || 'Sua Localização';
-
-            fullAddressData.display_name = addressText;
-            state.setCurrentOrigin({ latlng: { lat: latitude, lng: longitude }, data: fullAddressData });
-            dom.originInput.value = addressText;
-
-            const targetIconHtml = `<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-blue-500 animate-pulse" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>`;
-            const targetIcon = L.divIcon({
-                html: targetIconHtml,
-                className: 'leaflet-div-icon',
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
-            });
-
-            if (state.originMarker) state.map.removeLayer(state.originMarker);
-            const marker = L.marker(state.currentOrigin.latlng, { icon: targetIcon }).addTo(state.map);
-            state.setOriginMarker(marker);
-
-            state.map.setView([latitude, longitude], 16);
-            if (state.currentDestination) {
-                traceRoute();
-            }
-            dom.submitButton.disabled = !state.currentDestination;
-            showPushNotification("Localização atual definida como origem", "success", 3000);
-        },
-        (error) => {
-            console.error("Erro ao obter a localização: ", error);
-            let message = "Não foi possível obter sua localização.";
-            if (error.code === error.PERMISSION_DENIED) {
-                message = "Você negou o acesso à localização.";
-            }
-            showPushNotification(message, "error", 5000);
-        }, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-        }
-    );
-}
 
 function setupInitialEventListeners() {
     dom.continueWithoutLoginButton.addEventListener('click', () => {
@@ -114,7 +67,19 @@ function setupInitialEventListeners() {
     });
 }
 
+function handleLocationToggle() {
+    if (state.isTrackingLocation) {
+        stopLocationTracking();
+        dom.toggleLocationButton.classList.remove('active');
+    } else {
+        startLocationTracking();
+        dom.toggleLocationButton.classList.add('active');
+    }
+}
+
 function setupAppEventListeners() {
+    dom.toggleLocationButton.addEventListener('click', handleLocationToggle);
+
     dom.activateGpsButton.addEventListener('click', () => {
         toggleGpsModal(false);
         handleCurrentLocation(); // Tenta novamente obter a localização
@@ -137,16 +102,19 @@ function setupAppEventListeners() {
     });
 
     dom.clearButton.addEventListener('click', clearFieldsAndMap);
-    dom.currentLocationButton.addEventListener('click', handleCurrentLocation);
 
     dom.selectOriginButton.addEventListener('click', () => {
-        state.setCurrentSelectionMode('origin');
-        toggleMapVisibility(true);
+        const newMode = state.currentSelectionMode === 'origin' ? null : 'origin';
+        state.setCurrentSelectionMode(newMode);
+        setSelectionButtonState(newMode);
+        toggleMapVisibility(newMode !== null);
     });
 
-    dom.selectDestinationButton.addEventListener('click', (e) => {
-        state.setCurrentSelectionMode('destination');
-        toggleMapVisibility(true);
+    dom.selectDestinationButton.addEventListener('click', () => {
+        const newMode = state.currentSelectionMode === 'destination' ? null : 'destination';
+        state.setCurrentSelectionMode(newMode);
+        setSelectionButtonState(newMode);
+        toggleMapVisibility(newMode !== null);
     });
 
     dom.vehicleButtons.forEach(button => {
@@ -157,6 +125,8 @@ function setupAppEventListeners() {
             state.tripData.vehicle = vehicleType;
             state.tripData.fare = estimatedPrice;
             
+            saveAppState(); // Salva o estado após selecionar o veículo
+
             dom.statusMessage.textContent = `Procurando ${vehicleType} disponível...`;
             dom.statusDistance.textContent = `Distância: ${state.tripData.distance.toFixed(2)} km | Tempo: ${formatTime(state.tripData.time)}`;
             dom.statusPrice.textContent = `Preço estimado: ${estimatedPrice}`;
@@ -197,6 +167,47 @@ function setupAppEventListeners() {
         setMapTheme(document.body.classList.contains('dark'));
     });
     dom.toggleMapButton.addEventListener('click', () => toggleMapVisibility(null, true));
+
+    document.querySelectorAll('.address-textarea').forEach(textarea => {
+        textarea.addEventListener('input', () => {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${textarea.scrollHeight}px`;
+        });
+    });
+}
+
+function restoreUIFromState() {
+    toggleMapVisibility(state.isMapVisible);
+
+    if (!state.currentOrigin && !state.currentDestination) return;
+
+    if (state.currentOrigin) {
+        dom.originInput.value = state.currentOrigin.data.display_name;
+        addOrMoveMarker(state.currentOrigin.latlng, 'origin', 'Origem');
+        dom.originInput.parentElement.classList.add('input-filled');
+    }
+
+    if (state.currentDestination) {
+        dom.destinationInput.value = state.currentDestination.data.display_name;
+        addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino');
+        dom.destinationInput.closest('.input-group').classList.add('input-filled');
+    }
+
+    if (state.currentOrigin && state.currentDestination) {
+        traceRoute(true); // O 'true' força o ajuste do zoom
+        dom.submitButton.disabled = false;
+    }
+
+    if (state.tripData.vehicle) {
+        // Se um veículo foi selecionado, restaura o painel de status
+        const { vehicle, fare, distance, time } = state.tripData;
+        dom.statusMessage.textContent = `Procurando ${vehicle} disponível...`;
+        dom.statusDistance.textContent = `Distância: ${distance.toFixed(2)} km | Tempo: ${formatTime(time)}`;
+        dom.statusPrice.textContent = `Preço estimado: ${fare}`;
+        dom.statusOriginText.textContent = state.currentOrigin.data.display_name;
+        dom.statusDestinationText.textContent = state.currentDestination.data.display_name;
+        switchPanel('ride-status-panel');
+    }
 }
 
 function applyTheme() {
@@ -225,53 +236,53 @@ function checkAuthAndInitialize() {
     }
 }
 
+async function initializeMapAndLocation(isDark) {
+    // 1. Check for saved state and restore if it exists
+    if (state.currentOrigin) {
+        initializeMap(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng, isDark);
+        restoreUIFromState();
+        return; // Exit after restoring state
+    }
+
+    // 2. No saved state, find user location silently to center the map
+    const initializeWithDefault = () => {
+        initializeMap(state.defaultCoords[0], state.defaultCoords[1], isDark);
+    };
+
+    if (isMobileDevice()) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                initializeMap(position.coords.latitude, position.coords.longitude, isDark);
+            },
+            () => {
+                // Silently fail to default coordinates
+                initializeWithDefault();
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    } else {
+        try {
+            const ipLocation = await getLocationByIP();
+            if (ipLocation) {
+                initializeMap(ipLocation.lat, ipLocation.lng, isDark);
+            } else {
+                initializeWithDefault();
+            }
+        } catch (error) {
+            initializeWithDefault();
+        }
+    }
+}
+
 async function initializeApp() {
     const isDark = document.body.classList.contains('dark');
     setupAppEventListeners();
     renderHistoryList();
     setupPWA();
 
-    // A inicialização do mapa e do GPS só ocorre após a interação com o modal
-    if (isMobileDevice()) {
-        // Em dispositivos móveis, tenta usar o GPS e solicita ativação se necessário
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const { latitude, longitude } = position.coords;
-                state.setCurrentUserCoords({ lat: latitude, lng: longitude });
-                initializeMap(latitude, longitude, isDark);
-                const fullAddressData = await reverseGeocode(latitude, longitude);
-                const addressText = formatPlaceForDisplay(fullAddressData) || 'Sua Localização';
-                fullAddressData.display_name = addressText;
-                state.setCurrentOrigin({ latlng: { lat: latitude, lng: longitude }, data: fullAddressData });
-                dom.originInput.value = addressText;
-                dom.originInput.parentElement.classList.add('input-filled');
-            },
-            async (error) => {
-                toggleGpsModal(true); // Exibe o modal de ativação do GPS
-                dom.originInput.readOnly = false;
-                dom.originInput.placeholder = 'Digite o endereço de origem';
-                initializeMap(state.defaultCoords[0], state.defaultCoords[1], isDark);
-            },
-            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-        );
-    } else {
-        // Em desktops, usa a geolocalização por IP diretamente
-        const ipLocation = await getLocationByIP();
-        if (ipLocation) {
-            state.setCurrentUserCoords(ipLocation);
-            initializeMap(ipLocation.lat, ipLocation.lng, isDark);
-            const fullAddressData = await reverseGeocode(ipLocation.lat, ipLocation.lng);
-            const addressText = formatPlaceForDisplay(fullAddressData) || 'Localização Aproximada';
-            fullAddressData.display_name = addressText;
-            state.setCurrentOrigin({ latlng: ipLocation, data: fullAddressData });
-            dom.originInput.value = addressText;
-            dom.originInput.parentElement.classList.add('input-filled');
-        } else {
-            showPushNotification("Não foi possível obter a localização.", "error", 4000);
-            initializeMap(state.defaultCoords[0], state.defaultCoords[1], isDark);
-        }
-        dom.originInput.readOnly = false; // Permite edição em desktop
-    }
+    loadAppState(); // Carrega o estado salvo
+
+    await initializeMapAndLocation(isDark);
 
     // Foca no campo de destino após a inicialização
     dom.destinationInput.focus();

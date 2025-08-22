@@ -1,5 +1,6 @@
 import { dom } from './dom.js';
 import * as state from './state.js';
+import { saveAppState } from './state.js';
 import { reverseGeocode, fetchAddressSuggestions } from './api.js';
 import { formatPlaceForDisplay } from './utils.js';
 import { addOrMoveMarker, traceRoute } from './map.js';
@@ -39,9 +40,24 @@ export function toggleMapVisibility(forceVisible = null, fromButton = false) {
     }
 
     dom.mapContainer.classList.toggle('visible', shouldBeVisible);
+    state.setMapVisible(shouldBeVisible);
+    state.saveAppState();
 
     if (shouldBeVisible) {
-        setTimeout(() => state.map.invalidateSize(), 500);
+        setTimeout(() => {
+            if (!state.map) return;
+            state.map.invalidateSize();
+
+            // Centraliza o mapa com base no estado atual
+            if (state.currentOrigin && state.currentDestination) {
+                state.map.fitBounds([state.currentOrigin.latlng, state.currentDestination.latlng], { padding: [50, 50] });
+            } else if (state.currentOrigin) {
+                state.map.panTo(state.currentOrigin.latlng);
+            } else if (state.currentUserCoords) {
+                state.map.panTo(state.currentUserCoords);
+            }
+        }, 500); // Um pequeno atraso para garantir que o contêiner do mapa esteja visível
+
         // Exibir a mensagem do mapa apenas se estiver no modo de seleção
         if (state.currentSelectionMode) {
             dom.mapMessage.style.display = 'block';
@@ -163,6 +179,7 @@ export async function handleMapClick(e) {
         dom.destinationInput.closest('.input-group').classList.add('input-filled');
     }
 
+    saveAppState(); // Salva o estado após a seleção no mapa
     traceRoute();
     if (state.currentOrigin && state.currentDestination) {
         dom.submitButton.disabled = false;
@@ -170,7 +187,7 @@ export async function handleMapClick(e) {
 
     // Desativa o modo de seleção e o foco do input após o clique
     state.setCurrentSelectionMode(null);
-    state.setActiveDestinationInput(null);
+    setSelectionButtonState(null); // Desativa o estado visual
     dom.mapMessage.style.display = 'none';
 }
 
@@ -253,6 +270,7 @@ function renderSuggestion(place, displayText, inputEl, suggestionsEl) {
             dom.destinationInput.closest('.input-group').classList.add('input-filled');
         }
 
+        saveAppState(); // Salva o estado após selecionar uma sugestão
         traceRoute();
         if (state.currentOrigin && state.currentDestination) {
             dom.submitButton.disabled = false;
@@ -310,6 +328,21 @@ function setupTabs() {
             renderHistoryList();
         });
     });
+}
+
+/**
+ * Ativa ou desativa o estado visual do botão de seleção de mapa.
+ * @param {string|null} type - 'origin', 'destination' ou null para desativar ambos.
+ */
+export function setSelectionButtonState(type) {
+    dom.selectOriginButton.classList.remove('selection-active');
+    dom.selectDestinationButton.classList.remove('selection-active');
+
+    if (type === 'origin') {
+        dom.selectOriginButton.classList.add('selection-active');
+    } else if (type === 'destination') {
+        dom.selectDestinationButton.classList.add('selection-active');
+    }
 }
 
 // Chame a função para configurar as abas

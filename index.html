@@ -38,14 +38,14 @@
 </head>
 <body>
     <!-- Splash Screen -->
-    <div id="splash-screen" class="fixed inset-0 bg-white dark:bg-gray-900 flex flex-col items-center justify-center z-[9999] transition-opacity duration-500">
+    <div id="splash-screen" class="fixed inset-0 flex flex-col items-center justify-center z-[9999] transition-opacity duration-500">
         <img src="imgs/logo.png" alt="Logo Via Já" class="w-48 h-48 mb-8 animate-pulse pointer-events-none select-none" id="splash-logo" style="-webkit-user-drag: none;">
         <div class="loader"></div>
     </div>
 
     <!-- Modais fora do contêiner principal -->
     <div id="welcome-modal" class="fixed inset-0 z-50">
-        <div class="bg-white dark:bg-gray-800 w-full h-full flex flex-col items-center justify-center p-4">
+        <div id="welcome-modal-content" class="w-full h-full flex flex-col items-center justify-center p-4">
             <div class="text-center w-full max-w-[15rem]">
                 <img src="imgs/logo.png" alt="Logo Via Já" class="w-48 h-48 mx-auto mb-4" id="welcome-logo">
                 <h2 class="text-xl font-bold mb-2 text-gray-800 dark:text-white">Bem-vindo ao Via Já!</h2>
@@ -214,25 +214,24 @@
             <div id="map" class="h-full w-full rounded-xl"></div>
             <div id="map-message" class="map-message">Toque no mapa para selecionar o local</div>
             <div id="route-info-display" class="text-center font-semibold text-gray-700 dark:text-gray-300 my-2 hidden"></div>
+            <button id="toggle-location-button" class="leaflet-control leaflet-bar absolute bottom-5 right-5 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md cursor-pointer" title="Rastreamento de Localização">
+                <svg id="location-toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
         </div>
-
+ 
         <main class="flex-grow flex flex-col justify-start gap-4">
             <div id="ride-request-panel" class="content-panel">
                 <form id="ride-request-form" class="ride-request-form">
                     <div class="input-group input-group-origin">
-                        <input id="origin-input" type="text" placeholder="Meu local" autocomplete="off" readonly>
-                        <div class="flex items-center gap-2">
-                            <button type="button" id="current-location-button" class="select-in-field-button" title="Usar localização atual">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
-                                </svg>
-                            </button>
-                            <button type="button" id="select-origin-button" class="select-in-field-button" title="Selecionar no mapa">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-blue-svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                        </div>
+                        <input type="text" id="origin-input" placeholder="Meu local" autocomplete="off" readonly class="address-input">
+                        <button type="button" id="select-origin-button" class="select-in-field-button" title="Selecionar no mapa">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-blue-svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
                     </div>
                     <div id="origin-suggestions" class="autocomplete-suggestions"></div>
                     <div id="destination-container">
@@ -241,19 +240,17 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 drag-handle" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                                 </svg>
-                                <input id="destination-input" type="text" placeholder="Para onde?" autocomplete="off" class="destination-input">
-                                <div class="flex items-center gap-2">
-                                    <button type="button" id="select-destination-button" class="select-in-field-button" title="Selecionar no mapa">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                    <button type="button" id="add-destination-button" class="select-in-field-button" title="Adicionar parada" style="display: none;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                        </svg>
-                                    </button>
-                                </div>
+                                <input type="text" id="destination-input" placeholder="Para onde?" autocomplete="off" class="destination-input address-input">
+                                <button type="button" id="select-destination-button" class="select-in-field-button" title="Selecionar no mapa">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button type="button" id="add-destination-button" class="select-in-field-button" title="Adicionar parada" style="display: none;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </button>
                             </div>
                             <div id="destination-suggestions" class="autocomplete-suggestions"></div>
                         </div>

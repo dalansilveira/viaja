@@ -1,8 +1,8 @@
 import * as state from './state.js';
 import { dom } from './dom.js';
-import { handleMapClick } from './ui.js';
+import { handleMapClick, showPushNotification } from './ui.js';
 import { formatTime, estimateFare, formatPlaceForDisplay } from './utils.js';
-import { reverseGeocode } from './api.js';
+import { reverseGeocode, getLocationByIP } from './api.js';
 
 let currentTileLayer;
 
@@ -121,8 +121,9 @@ export function addOrMoveMarker(coords, type, name) {
 
 /**
  * Traça uma rota entre a origem e todos os destinos no mapa, na ordem correta.
+ * @param {boolean} fitBounds - Se deve ajustar o zoom para a rota.
  */
-export function traceRoute() {
+export function traceRoute(fitBounds = false) {
     if (state.routeControl) {
         state.map.removeControl(state.routeControl);
         state.setRouteControl(null);
@@ -215,8 +216,76 @@ export function traceRoute() {
             button.querySelector('.vehicle-price').textContent = price;
         });
         
-        state.map.fitBounds(route.coordinates, { padding: [50, 50] });
+        if (fitBounds) {
+            state.map.fitBounds(route.coordinates, { padding: [50, 50] });
+        }
     });
 
     state.setRouteControl(control);
+}
+
+/**
+ * Inicia o rastreamento contínuo da localização do usuário.
+ */
+export function startLocationTracking() {
+    if (state.locationWatchId) {
+        stopLocationTracking();
+    }
+
+    const handlePositionUpdate = (lat, lng) => {
+        const newLatLng = { lat, lng };
+        state.setCurrentUserCoords(newLatLng);
+
+        if (state.originMarker) {
+            state.originMarker.setLatLng(newLatLng);
+        } else {
+            addOrMoveMarker(newLatLng, 'origin', 'Sua Localização');
+        }
+
+        state.map.panTo(newLatLng);
+
+        if (state.currentDestination) {
+            traceRoute();
+        }
+    };
+
+    const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+            handlePositionUpdate(position.coords.latitude, position.coords.longitude);
+        },
+        async (error) => {
+            console.error("Erro no rastreamento de localização por GPS: ", error);
+            // Fallback para GeoIP
+            try {
+                const ipLocation = await getLocationByIP();
+                if (ipLocation) {
+                    handlePositionUpdate(ipLocation.lat, ipLocation.lng);
+                } else {
+                    stopLocationTracking();
+                }
+            } catch (ipError) {
+                console.error("Erro ao buscar localização por IP:", ipError);
+                stopLocationTracking();
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+
+    state.setLocationWatchId(watchId);
+    state.setIsTrackingLocation(true);
+}
+
+/**
+ * Para o rastreamento contínuo da localização do usuário.
+ */
+export function stopLocationTracking() {
+    if (state.locationWatchId !== null) {
+        navigator.geolocation.clearWatch(state.locationWatchId);
+        state.setLocationWatchId(null);
+        state.setIsTrackingLocation(false);
+    }
 }
