@@ -81,7 +81,7 @@ export function renderHistoryList() {
         itemsToDisplay.forEach(place => {
             const isFavorite = favorites.some(item => item.place_id === place.place_id);
             const historyItem = document.createElement('div');
-historyItem.className = 'flex items-center justify-between p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-600 dark:text-gray-300 w-full';
+            historyItem.className = `flex items-center justify-between p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-600 dark:text-gray-300 w-full ${showFavoritesOnly ? 'favorite-item' : ''}`;
             historyItem.innerHTML = `
                 <button type="button" class="flex items-center gap-2 text-left flex-grow" data-place-id="${place.place_id}">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-gray-400 flex-shrink-0">

@@ -2,130 +2,73 @@ import { dom } from './dom.js';
 import { showPushNotification } from './ui.js';
 
 export function setupAuthEventListeners() {
-    dom.authButton.addEventListener('click', () => {
-        dom.loginModal.classList.add('visible');
+    dom.authMenuButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dom.authMenu.classList.toggle('hidden');
     });
 
-    dom.closeModalButton.addEventListener('click', () => {
-        dom.loginModal.classList.remove('visible');
-        dom.loginErrorMessage.textContent = '';
+    dom.authMenuLogin.addEventListener('click', () => {
+        dom.authMenu.classList.add('hidden');
+        dom.welcomeModal.style.display = 'flex';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!dom.authMenu.contains(e.target) && !dom.authMenuButton.contains(e.target)) {
+            dom.authMenu.classList.add('hidden');
+        }
+    });
+
+    dom.authMenuProfile.addEventListener('click', () => {
+        showPushNotification("Função de perfil ainda não implementada.", "info");
+        dom.authMenu.classList.add('hidden');
+    });
+
+    dom.authMenuLogout.addEventListener('click', () => {
+        localStorage.removeItem('user_token');
+        window.location.reload();
+    });
+
+    dom.authMenuHelp.addEventListener('click', () => {
+        showPushNotification("Função de ajuda ainda não implementada.", "info");
+        dom.authMenu.classList.add('hidden');
     });
 
     dom.loginButton.addEventListener('click', () => {
-        showPushNotification("Função de login temporariamente desativada.", "info");
-    });
-
-    dom.goToRegisterButton.addEventListener('click', () => {
-        dom.loginModal.classList.remove('visible');
-        dom.registerModal.classList.add('visible');
-        dom.loginErrorMessage.textContent = '';
-    });
-
-    dom.forgotPasswordLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        dom.loginModal.classList.remove('visible');
-        dom.forgotPasswordModal.classList.add('visible');
-        dom.loginErrorMessage.textContent = '';
-    });
-
-    dom.closeRegisterModalButton.addEventListener('click', () => {
-        dom.registerModal.classList.remove('visible');
-        dom.registerErrorMessage.textContent = '';
-    });
-
-    dom.backToLoginButton.addEventListener('click', () => {
-        dom.registerModal.classList.remove('visible');
-        dom.loginModal.classList.add('visible');
-        dom.registerErrorMessage.textContent = '';
-    });
-
-    dom.createAccountButton.addEventListener('click', () => {
-        const name = dom.registerNameInput.value.trim();
-        const phone = dom.registerPhoneInput.value.trim();
-        const password = dom.registerPasswordInput.value;
-        const confirmPassword = dom.registerConfirmPasswordInput.value;
-        
-        dom.registerErrorMessage.textContent = '';
-
-        if (!name || !phone) {
-            dom.registerErrorMessage.textContent = 'Nome e telefone são obrigatórios.';
-            return;
-        }
-        if (password.length < 6) {
-            dom.registerErrorMessage.textContent = 'A senha deve ter no mínimo 6 caracteres.';
-            return;
-        }
-        if (password !== confirmPassword) {
-            dom.registerErrorMessage.textContent = 'As senhas não coincidem.';
-            return;
-        }
-
-        showPushNotification("Função de cadastro temporariamente desativada.", "info");
-    });
-
-    dom.closeForgotModalButton.addEventListener('click', () => {
-        dom.forgotPasswordModal.classList.remove('visible');
-        dom.forgotErrorMessage.textContent = '';
-    });
-
-    dom.backToLoginFromForgotButton.addEventListener('click', () => {
-        dom.forgotPasswordModal.classList.remove('visible');
-        dom.loginModal.classList.add('visible');
-        dom.forgotErrorMessage.textContent = '';
-    });
-
-    dom.sendCodeButton.addEventListener('click', () => {
-        const phone = dom.forgotPhoneInput.value.trim();
-        dom.forgotErrorMessage.textContent = '';
-
+        const phone = dom.loginPhoneInput.value.trim();
         if (!phone) {
-            dom.forgotErrorMessage.textContent = 'Por favor, insira seu número de telefone.';
+            dom.loginErrorMessage.textContent = 'Por favor, insira seu telefone.';
             return;
         }
-
-        showPushNotification(`Um código de verificação foi enviado para ${phone}.`, 'info');
-        
-        dom.forgotPasswordModal.classList.remove('visible');
-        dom.verifyCodeModal.classList.add('visible');
+        showPushNotification(`Enviando código para ${phone}...`, "info");
+        // Simula o envio do código e a transição para a tela de verificação
+        setTimeout(() => {
+            dom.welcomeModal.style.display = 'none';
+            dom.verifyCodeModal.classList.add('visible');
+        }, 1000);
     });
 
     dom.closeVerifyModalButton.addEventListener('click', () => {
         dom.verifyCodeModal.classList.remove('visible');
-        dom.verifyErrorMessage.textContent = '';
     });
 
     dom.backToLoginFromVerifyButton.addEventListener('click', () => {
         dom.verifyCodeModal.classList.remove('visible');
-        dom.loginModal.classList.add('visible');
-        dom.verifyErrorMessage.textContent = '';
+        dom.welcomeModal.style.display = 'flex';
     });
 
-    dom.resetPasswordButton.addEventListener('click', () => {
+    dom.verifyCodeButton.addEventListener('click', () => {
         const code = dom.verifyCodeInput.value.trim();
-        const newPassword = dom.newPasswordInput.value;
-        const confirmNewPassword = dom.confirmNewPasswordInput.value;
-
-        dom.verifyErrorMessage.textContent = '';
-
         if (code.length !== 6 || !/^\d+$/.test(code)) {
-            dom.verifyErrorMessage.textContent = 'O código de verificação deve ter 6 dígitos.';
+            dom.verifyErrorMessage.textContent = 'O código deve ter 6 dígitos.';
             return;
         }
-        if (newPassword.length < 6) {
-            dom.verifyErrorMessage.textContent = 'A nova senha deve ter no mínimo 6 caracteres.';
-            return;
-        }
-        if (newPassword !== confirmNewPassword) {
-            dom.verifyErrorMessage.textContent = 'As novas senhas não coincidem.';
-            return;
-        }
-
-        showPushNotification('Senha redefinida com sucesso!', 'success');
+        // Simulação de verificação de código
+        showPushNotification('Login bem-sucedido!', 'success');
+        localStorage.setItem('user_token', 'fake_user_token'); // Simula a criação de um token de sessão
         
-        dom.verifyCodeInput.value = '';
-        dom.newPasswordInput.value = '';
-        dom.confirmNewPasswordInput.value = '';
-        dom.verifyCodeModal.classList.remove('visible');
-        dom.loginModal.classList.add('visible');
+        setTimeout(() => {
+            dom.verifyCodeModal.classList.remove('visible');
+            window.location.reload(); // Recarrega a página para acionar a lógica de inicialização do app
+        }, 1000);
     });
 }

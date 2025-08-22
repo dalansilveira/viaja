@@ -1,13 +1,15 @@
 export let map;
 export let originMarker;
-export let destinationMarkers = [];
+export let destinationMarker;
 export let routeControl;
+export let startCircle;
+export let endCircle;
 export let currentOrigin = null;
 export let currentDestination = null; // Pode ser usado para o destino final
 export let currentSelectionMode = null;
 export let deferredPrompt = null;
 export let currentUserCoords = null;
-export let activeDestinationInput = null;
+export let isDraggingMarker = false;
 
 export const tripData = {
     distance: 0,
@@ -33,25 +35,20 @@ export function setOriginMarker(marker) {
     originMarker = marker;
 }
 
-export function addDestinationMarker(id, marker) {
-    // Remove qualquer marcador existente com o mesmo ID antes de adicionar um novo
-    removeDestinationMarker(id);
-    destinationMarkers.push({ id, marker });
-}
-
-export function removeDestinationMarker(id) {
-    const markerIndex = destinationMarkers.findIndex(m => m.id === id);
-    if (markerIndex > -1) {
-        const { marker } = destinationMarkers[markerIndex];
-        if (map && map.hasLayer(marker)) {
-            map.removeLayer(marker);
-        }
-        destinationMarkers.splice(markerIndex, 1);
-    }
+export function setDestinationMarker(marker) {
+    destinationMarker = marker;
 }
 
 export function setRouteControl(control) {
     routeControl = control;
+}
+
+export function setStartCircle(circle) {
+    startCircle = circle;
+}
+
+export function setEndCircle(circle) {
+    endCircle = circle;
 }
 
 export function setCurrentOrigin(origin) {
@@ -74,8 +71,8 @@ export function setCurrentUserCoords(coords) {
     currentUserCoords = coords;
 }
 
-export function setActiveDestinationInput(input) {
-    activeDestinationInput = input;
+export function setIsDraggingMarker(isDragging) {
+    isDraggingMarker = isDragging;
 }
 
 export function resetTripData() {

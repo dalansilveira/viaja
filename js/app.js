@@ -1,9 +1,9 @@
 import { dom } from './dom.js';
 import * as state from './state.js';
-import { debounce, formatTime, formatPlaceForDisplay, estimateFare } from './utils.js';
+import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice } from './utils.js';
 import { getLocationByIP, reverseGeocode } from './api.js';
 import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme } from './map.js';
-import { displayAddressSuggestions, toggleMapVisibility, switchPanel, showPushNotification, toggleTheme } from './ui.js';
+import { displayAddressSuggestions, toggleMapVisibility, switchPanel, showPushNotification, toggleTheme, toggleGpsModal } from './ui.js';
 import { renderHistoryList, saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
 import { setupPWA } from './pwa.js';
@@ -18,38 +18,32 @@ function clearFieldsAndMap() {
     dom.originInput.value = '';
     delete dom.originInput.dataset.lat;
     delete dom.originInput.dataset.lng;
+    dom.originInput.parentElement.classList.remove('input-filled');
 
-    // 2. Limpar estado e marcadores de destino
-    if (state.destinationMarkers && state.destinationMarkers.length > 0) {
-        // Itera de trás para frente para remover os itens do array de forma segura
-        for (let i = state.destinationMarkers.length - 1; i >= 0; i--) {
-            const markerData = state.destinationMarkers[i];
-            state.removeDestinationMarker(markerData.id);
-        }
-    }
+    // 2. Limpar estado e marcador de destino
     state.setCurrentDestination(null);
-
-    // 3. Limpar UI dos destinos
-    const destinationContainer = dom.destinationContainer;
-    const destinationItems = destinationContainer.querySelectorAll('.destination-item');
-    
-    destinationItems.forEach((item, index) => {
-        if (index > 0) {
-            item.remove();
-        }
-    });
-
-    const firstDestinationInput = destinationContainer.querySelector('.destination-input');
-    if (firstDestinationInput) {
-        firstDestinationInput.value = '';
-        delete firstDestinationInput.dataset.lat;
-        delete firstDestinationInput.dataset.lng;
+    if (state.destinationMarker) {
+        state.map.removeLayer(state.destinationMarker);
+        state.setDestinationMarker(null);
     }
+    dom.destinationInput.value = '';
+    delete dom.destinationInput.dataset.lat;
+    delete dom.destinationInput.dataset.lng;
+    dom.destinationInput.closest('.input-group').classList.remove('input-filled');
+
 
     // 4. Limpar a rota do mapa e da UI
     if (state.routeControl) {
         state.map.removeControl(state.routeControl);
         state.setRouteControl(null);
+    }
+    if (state.startCircle) {
+        state.map.removeLayer(state.startCircle);
+        state.setStartCircle(null);
+    }
+    if (state.endCircle) {
+        state.map.removeLayer(state.endCircle);
+        state.setEndCircle(null);
     }
     dom.submitButton.disabled = true;
     state.resetTripData();
@@ -113,62 +107,24 @@ async function handleCurrentLocation() {
     );
 }
 
-function setupDragAndDrop() {
-    const container = dom.destinationContainer;
-    let draggedItem = null;
-
-    container.addEventListener('dragstart', (e) => {
-        // Permite arrastar apenas se não for o primeiro item
-        if (e.target.classList.contains('destination-item') && e.target !== container.querySelector('.destination-item')) {
-            draggedItem = e.target;
-            setTimeout(() => {
-                draggedItem.style.opacity = '0.5';
-            }, 0);
-        } else {
-            e.preventDefault();
-        }
+function setupInitialEventListeners() {
+    dom.continueWithoutLoginButton.addEventListener('click', () => {
+        dom.welcomeModal.style.display = 'none';
+        initializeApp();
     });
-
-    container.addEventListener('dragend', (e) => {
-        if (draggedItem) {
-            setTimeout(() => {
-                draggedItem.style.opacity = '1';
-                draggedItem = null;
-            }, 0);
-        }
-    });
-
-    container.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const afterElement = getDragAfterElement(container, e.clientY);
-        if (afterElement == null) {
-            container.appendChild(draggedItem);
-        } else {
-            container.insertBefore(draggedItem, afterElement);
-        }
-    });
-
-    container.addEventListener('drop', () => {
-        traceRoute();
-    });
-
-    function getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.destination-item:not(.dragging)')];
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
 }
 
-function setupEventListeners() {
-    setupDragAndDrop();
+function setupAppEventListeners() {
+    dom.activateGpsButton.addEventListener('click', () => {
+        toggleGpsModal(false);
+        handleCurrentLocation(); // Tenta novamente obter a localização
+    });
+
+    dom.cancelGpsButton.addEventListener('click', () => {
+        toggleGpsModal(false);
+        // Opcional: pode adicionar alguma lógica aqui se o usuário cancelar
+    });
+
     dom.submitButton.addEventListener('click', () => {
         if (state.currentOrigin && state.currentDestination) {
             // Salva o destino primário no histórico ao solicitar a corrida
@@ -188,76 +144,9 @@ function setupEventListeners() {
         toggleMapVisibility(true);
     });
 
-    dom.selectDestinationButton.addEventListener('click', () => {
+    dom.selectDestinationButton.addEventListener('click', (e) => {
         state.setCurrentSelectionMode('destination');
         toggleMapVisibility(true);
-    });
-
-    dom.addDestinationButton.addEventListener('click', () => {
-        const destinationContainer = dom.destinationContainer;
-        const allDestinationInputs = destinationContainer.querySelectorAll('.destination-input');
-
-        let allFilled = true;
-        allDestinationInputs.forEach(input => {
-            if (input.value.trim() === '') {
-                allFilled = false;
-            }
-        });
-
-        if (!allFilled) {
-            showPushNotification('Preencha todas as paradas antes de adicionar uma nova.', 'warning');
-            return;
-        }
-
-        const originalItem = destinationContainer.querySelector('.destination-item');
-        const newItem = originalItem.cloneNode(true);
-        const destId = `dest_${Date.now()}`;
-
-        newItem.classList.add('mt-2');
-        newItem.dataset.id = destId;
-
-        const newInput = newItem.querySelector('.destination-input');
-        newInput.value = '';
-        newInput.id = `destination-input-${destId}`;
-        newInput.dataset.id = destId;
-
-        const newSuggestions = newItem.querySelector('.autocomplete-suggestions');
-        newSuggestions.id = `destination-suggestions-${destId}`;
-        newSuggestions.innerHTML = '';
-        newInput.addEventListener('input', debounce((e) => displayAddressSuggestions(e.target, newSuggestions), 300));
-
-        const buttonContainer = newItem.querySelector('.flex');
-        const selectOnMapButton = newItem.querySelector('#select-destination-button');
-        if (selectOnMapButton) {
-            selectOnMapButton.id = `select-destination-button-${destId}`;
-            selectOnMapButton.addEventListener('click', () => {
-                state.setCurrentSelectionMode('destination');
-                state.setActiveDestinationInput(newInput);
-                toggleMapVisibility(true);
-            });
-        }
-
-        const addButton = newItem.querySelector('#add-destination-button');
-        if (addButton) {
-            addButton.remove();
-        }
-
-        const removeButton = document.createElement('button');
-        removeButton.type = 'button';
-        removeButton.className = 'select-in-field-button';
-        removeButton.title = 'Remover parada';
-        removeButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>`;
-        removeButton.addEventListener('click', () => {
-            state.removeDestinationMarker(destId);
-            newItem.remove();
-            traceRoute();
-        });
-        
-        if (buttonContainer) {
-            buttonContainer.appendChild(removeButton);
-        }
-
-        destinationContainer.appendChild(newItem);
     });
 
     dom.vehicleButtons.forEach(button => {
@@ -298,17 +187,9 @@ function setupEventListeners() {
             dom.originSuggestions.style.display = 'none';
         }
 
-        // Itera sobre todos os itens de destino
-        const destinationItems = dom.destinationContainer.querySelectorAll('.destination-item');
-        destinationItems.forEach(item => {
-            const input = item.querySelector('.destination-input');
-            const suggestions = item.querySelector('.autocomplete-suggestions');
-            if (input && suggestions) {
-                if (!input.contains(e.target) && !suggestions.contains(e.target)) {
-                    suggestions.style.display = 'none';
-                }
-            }
-        });
+        if (!dom.destinationInput.contains(e.target) && !dom.destinationSuggestions.contains(e.target)) {
+            dom.destinationSuggestions.style.display = 'none';
+        }
     });
 
     dom.themeToggle.addEventListener('click', () => {
@@ -318,35 +199,84 @@ function setupEventListeners() {
     dom.toggleMapButton.addEventListener('click', () => toggleMapVisibility(null, true));
 }
 
-async function initializeApp() {
+function applyTheme() {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
 
-    if (isDark) {
-        document.body.classList.add('dark');
-    } else {
-        document.body.classList.remove('dark');
-    }
+    document.body.classList.toggle('dark', isDark);
     
-    const logoElement = document.querySelector('h1 img');
-    if (logoElement) {
-        logoElement.src = isDark ? 'imgs/logodark.png' : 'imgs/logo.png';
-    }
-    
-    renderHistoryList();
-    setupEventListeners();
-    setupAuthEventListeners();
-    setupPWA();
+    const logoElements = document.querySelectorAll('img[alt="Logo Via Já"]');
+    logoElements.forEach(logo => {
+        logo.src = isDark ? 'imgs/logodark.png' : 'imgs/logo.png';
+    });
+}
 
-    const ipLocation = await getLocationByIP();
-    if (ipLocation) {
-        state.setCurrentUserCoords(ipLocation);
-        initializeMap(ipLocation.lat, ipLocation.lng, isDark);
+function checkAuthAndInitialize() {
+    // Simulação: verificar se o usuário está logado (ex: checando um token no localStorage)
+    const isLoggedIn = localStorage.getItem('user_token');
+
+    if (isLoggedIn) {
+        dom.welcomeModal.style.display = 'none';
+        initializeApp();
     } else {
-        showPushNotification("Não foi possível obter a localização. Usando localização padrão.", "warning", 4000);
-        initializeMap(state.defaultCoords[0], state.defaultCoords[1], isDark);
+        dom.welcomeModal.style.display = 'flex';
     }
 }
 
-window.onload = initializeApp;
+async function initializeApp() {
+    const isDark = document.body.classList.contains('dark');
+    setupAppEventListeners();
+    renderHistoryList();
+    setupPWA();
+
+    // A inicialização do mapa e do GPS só ocorre após a interação com o modal
+    if (isMobileDevice()) {
+        // Em dispositivos móveis, tenta usar o GPS e solicita ativação se necessário
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                state.setCurrentUserCoords({ lat: latitude, lng: longitude });
+                initializeMap(latitude, longitude, isDark);
+                const fullAddressData = await reverseGeocode(latitude, longitude);
+                const addressText = formatPlaceForDisplay(fullAddressData) || 'Sua Localização';
+                fullAddressData.display_name = addressText;
+                state.setCurrentOrigin({ latlng: { lat: latitude, lng: longitude }, data: fullAddressData });
+                dom.originInput.value = addressText;
+                dom.originInput.parentElement.classList.add('input-filled');
+            },
+            async (error) => {
+                toggleGpsModal(true); // Exibe o modal de ativação do GPS
+                dom.originInput.readOnly = false;
+                dom.originInput.placeholder = 'Digite o endereço de origem';
+                initializeMap(state.defaultCoords[0], state.defaultCoords[1], isDark);
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+    } else {
+        // Em desktops, usa a geolocalização por IP diretamente
+        const ipLocation = await getLocationByIP();
+        if (ipLocation) {
+            state.setCurrentUserCoords(ipLocation);
+            initializeMap(ipLocation.lat, ipLocation.lng, isDark);
+            const fullAddressData = await reverseGeocode(ipLocation.lat, ipLocation.lng);
+            const addressText = formatPlaceForDisplay(fullAddressData) || 'Localização Aproximada';
+            fullAddressData.display_name = addressText;
+            state.setCurrentOrigin({ latlng: ipLocation, data: fullAddressData });
+            dom.originInput.value = addressText;
+            dom.originInput.parentElement.classList.add('input-filled');
+        } else {
+            showPushNotification("Não foi possível obter a localização.", "error", 4000);
+            initializeMap(state.defaultCoords[0], state.defaultCoords[1], isDark);
+        }
+        dom.originInput.readOnly = false; // Permite edição em desktop
+    }
+}
+
+window.onload = () => {
+    applyTheme();
+    // Configura os listeners de autenticação e do modal inicial
+    setupAuthEventListeners();
+    setupInitialEventListeners();
+    checkAuthAndInitialize();
+};

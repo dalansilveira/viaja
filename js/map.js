@@ -1,7 +1,8 @@
 import * as state from './state.js';
 import { dom } from './dom.js';
 import { handleMapClick } from './ui.js';
-import { formatTime, estimateFare } from './utils.js';
+import { formatTime, estimateFare, formatPlaceForDisplay } from './utils.js';
+import { reverseGeocode } from './api.js';
 
 let currentTileLayer;
 
@@ -48,25 +49,14 @@ export function initializeMap(lat, lng, isDark) {
  * @param {string} type - Tipo de marcador ('origin' ou 'destination').
  * @param {string} name - Nome para a tooltip do marcador.
  */
-export function addOrMoveMarker(coords, type, name, id = null, number = null) {
-    let marker;
-
-    if (type === 'origin') {
-        marker = state.originMarker;
-    } else if (id) {
-        const markerData = state.destinationMarkers.find(m => m.id === id);
-        if (markerData) {
-            marker = markerData.marker;
-        }
-    }
+export function addOrMoveMarker(coords, type, name) {
+    let marker = type === 'origin' ? state.originMarker : state.destinationMarker;
 
     const pinClass = type === 'origin' ? 'pin-blue-svg' : 'pin-green-svg';
-    const numberHtml = number ? `<span class="marker-number">${number}</span>` : '';
     const markerHtml = `<div class="marker-container">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-10 h-10 ${pinClass} pin-shadow">
                                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                             </svg>
-                            ${numberHtml}
                         </div>`;
     
     const customIcon = L.divIcon({
@@ -80,12 +70,51 @@ export function addOrMoveMarker(coords, type, name, id = null, number = null) {
         marker.setLatLng(coords);
         marker.setIcon(customIcon);
     } else {
-        marker = L.marker(coords, { icon: customIcon }).addTo(state.map).bindTooltip(name, { permanent: false, direction: 'top' });
+        marker = L.marker(coords, { 
+            icon: customIcon,
+            draggable: true 
+        }).addTo(state.map);
+
+        marker.on('dragstart', () => {
+            state.setIsDraggingMarker(true);
+        });
+
+        marker.on('dragend', async (e) => {
+            state.setIsDraggingMarker(false);
+            const newLatLng = e.target.getLatLng();
+            const inputEl = type === 'origin' ? dom.originInput : dom.destinationInput;
+
+            if (inputEl) {
+                inputEl.value = 'Buscando endereço...';
+                try {
+                    const fullAddressData = await reverseGeocode(newLatLng.lat, newLatLng.lng);
+                    const addressText = formatPlaceForDisplay(fullAddressData) || 'Endereço desconhecido';
+                    
+                    inputEl.value = addressText;
+                    inputEl.dataset.lat = newLatLng.lat;
+                    inputEl.dataset.lng = newLatLng.lng;
+                    fullAddressData.display_name = addressText;
+
+                    if (type === 'origin') {
+                        state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
+                    } else {
+                        state.setCurrentDestination({ latlng: newLatLng, data: fullAddressData });
+                    }
+                } catch (error) {
+                    console.error("Erro ao buscar endereço:", error);
+                    inputEl.value = 'Erro ao buscar endereço';
+                } finally {
+                    traceRoute();
+                }
+            } else {
+                traceRoute();
+            }
+        });
 
         if (type === 'origin') {
             state.setOriginMarker(marker);
-        } else if (id) {
-            state.addDestinationMarker(id, marker);
+        } else {
+            state.setDestinationMarker(marker);
         }
     }
 }
@@ -98,24 +127,29 @@ export function traceRoute() {
         state.map.removeControl(state.routeControl);
         state.setRouteControl(null);
     }
+    dom.routeInfoDisplay.classList.add('hidden');
 
-    const destinationInputs = dom.destinationContainer.querySelectorAll('.destination-input');
-    const hasMultipleStops = destinationInputs.length > 1;
-    
-    const waypoints = [];
-    if (state.currentOrigin) {
-        waypoints.push(L.latLng(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng));
-        addOrMoveMarker(state.currentOrigin.latlng, 'origin', 'Origem', null, hasMultipleStops ? 1 : null);
+    // Remove os círculos de início e fim existentes
+    if (state.startCircle) {
+        state.map.removeLayer(state.startCircle);
+        state.setStartCircle(null);
+    }
+    if (state.endCircle) {
+        state.map.removeLayer(state.endCircle);
+        state.setEndCircle(null);
     }
 
-    destinationInputs.forEach((input, index) => {
-        if (input.dataset.lat && input.dataset.lng) {
-            const latlng = L.latLng(parseFloat(input.dataset.lat), parseFloat(input.dataset.lng));
-            waypoints.push(latlng);
-            const destId = input.dataset.id || `dest_${index}`; // Fallback
-            addOrMoveMarker(latlng, 'destination', `Destino ${index + 2}`, destId, hasMultipleStops ? index + 2 : null);
-        }
-    });
+    if (!state.currentOrigin || !state.currentDestination) {
+        return;
+    }
+    
+    const waypoints = [
+        L.latLng(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng),
+        L.latLng(state.currentDestination.latlng.lat, state.currentDestination.latlng.lng)
+    ];
+
+    addOrMoveMarker(state.currentOrigin.latlng, 'origin', 'Origem');
+    addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino');
 
     if (waypoints.length < 2) {
         return;
@@ -129,9 +163,9 @@ export function traceRoute() {
         lineOptions: {
             styles: [
                 // Contorno (casing)
-                { color: 'black', opacity: 0.3, weight: 9 },
+                { color: 'black', opacity: 0.3, weight: 12 },
                 // Linha principal
-                { color: routeColor, weight: 6, opacity: 0.8 }
+                { color: routeColor, weight: 9, opacity: 0.8 }
             ]
         },
         createMarker: function() { return null; },
@@ -146,6 +180,25 @@ export function traceRoute() {
         const route = e.routes[0];
         const distanceMeters = route.summary.totalDistance;
         const timeSeconds = route.summary.totalTime;
+
+        // Adiciona círculos nas extremidades da rota
+        const startLatLng = route.coordinates[0];
+        const endLatLng = route.coordinates[route.coordinates.length - 1];
+
+        const circleOptions = {
+            radius: 7,
+            fillColor: routeColor,
+            color: '#ffffff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 1
+        };
+
+        const startCircle = L.circleMarker(startLatLng, circleOptions).addTo(state.map);
+        const endCircle = L.circleMarker(endLatLng, circleOptions).addTo(state.map);
+
+        state.setStartCircle(startCircle);
+        state.setEndCircle(endCircle);
 
         state.tripData.distance = distanceMeters / 1000;
         state.tripData.time = timeSeconds;

@@ -124,23 +124,23 @@ export function switchPanel(panelId) {
  * @param {object} e - Objeto do evento do clique.
  */
 export async function handleMapClick(e) {
-    if (!state.currentSelectionMode) return;
+    if (!state.currentSelectionMode || state.isDraggingMarker) return;
 
     const latlng = e.latlng;
     const type = state.currentSelectionMode;
     
     let inputEl;
+
     if (type === 'origin') {
         inputEl = dom.originInput;
     } else if (type === 'destination') {
-        inputEl = state.activeDestinationInput || dom.destinationInput;
+        inputEl = dom.destinationInput;
     }
 
     if (!inputEl) return;
 
     const name = (type === 'origin') ? 'Origem' : 'Destino';
 
-    addOrMoveMarker(latlng, type, name);
     inputEl.value = 'Buscando endereço...';
 
     const fullAddressData = await reverseGeocode(latlng.lat, latlng.lng);
@@ -155,18 +155,22 @@ export async function handleMapClick(e) {
 
     if (type === 'origin') {
         state.setCurrentOrigin({ latlng, data: fullAddressData });
+        addOrMoveMarker(latlng, 'origin', 'Origem');
+        dom.originInput.parentElement.classList.add('input-filled');
     } else {
-        // A lógica de múltiplos destinos é tratada pelo dataset agora.
         state.setCurrentDestination({ latlng, data: fullAddressData });
+        addOrMoveMarker(latlng, 'destination', 'Destino');
+        dom.destinationInput.closest('.input-group').classList.add('input-filled');
     }
 
+    traceRoute();
     if (state.currentOrigin && state.currentDestination) {
-        traceRoute();
         dom.submitButton.disabled = false;
     }
 
-    // Desativa o modo de seleção após o clique
+    // Desativa o modo de seleção e o foco do input após o clique
     state.setCurrentSelectionMode(null);
+    state.setActiveDestinationInput(null);
     dom.mapMessage.style.display = 'none';
 }
 
@@ -201,12 +205,17 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
                 if (inputEl.id === 'origin-input') {
                     state.setCurrentOrigin({ latlng, data: place });
                     addOrMoveMarker(latlng, 'origin', 'Origem');
+                    dom.originInput.parentElement.classList.add('input-filled');
                 } else {
                     state.setCurrentDestination({ latlng, data: place });
+                    addOrMoveMarker(latlng, 'destination', 'Destino');
+                    dom.destinationInput.closest('.input-group').classList.add('input-filled');
                 }
 
                 traceRoute();
-                dom.submitButton.disabled = !state.currentOrigin;
+                if (state.currentOrigin && state.currentDestination) {
+                    dom.submitButton.disabled = false;
+                }
                 
                 if (!dom.mapContainer.classList.contains('visible')) {
                     toggleMapVisibility(true);
@@ -222,6 +231,10 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
 /**
  * Alterna entre o tema claro e escuro.
  */
+export function toggleGpsModal(show) {
+    dom.gpsModal.classList.toggle('visible', show);
+}
+
 export function toggleTheme() {
     const isDark = document.body.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');

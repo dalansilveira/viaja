@@ -98,3 +98,7 @@ export function estimateFare(distanceKm, vehicleType) {
     const finalFare = Math.max(totalFare, rates.minFare);
     return `R$ ${finalFare.toFixed(2).replace('.', ',')}`;
 }
+
+export function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
