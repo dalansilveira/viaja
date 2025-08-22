@@ -2,41 +2,18 @@
   "name": "viaja-app",
   "version": "1.0.0",
   "description": "Aplicativo de transporte ViaJá",
-  "main": "js/main.js",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder"
-  },
-  "build": {
-    "appId": "com.dpcs.viaja",
-    "productName": "ViaJá",
-    "files": [
-      "index.html",
-      "js/main.js",
-      "imgs/logo.png",
-      "imgs/logodark.png",
-      "splash.html",
-      "js/preload-splash.js",
-      "js/sw.js",
-      "js/preload.js",
-      "js/renderer.js"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "imgs/logo.png"
-    }
+    "start": "live-server"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^28.3.3",
-    "electron-builder": "^24.13.3"
+    "live-server": "^1.2.2"
   },
   "dependencies": {
     "@capacitor/cli": "^7.4.2",
-    "@capacitor/core": "^7.4.2",
-    "electron-store": "^8.2.0"
+    "@capacitor/core": "^7.4.2"
   },
   "repository": {
     "type": "git",

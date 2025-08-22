@@ -7,9 +7,10 @@
 
     <!-- PWA & SEO Meta Tags -->
     <title>Via Já</title>
+    <link rel="icon" href="imgs/logodark.png" type="image/png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
-    <link rel="apple-touch-icon" href="imgs/logo.png"> <!-- Use um ícone de 180x180 ou 192x192 -->
+    <link rel="apple-touch-icon" href="imgs/logodark.png"> <!-- Use um ícone de 180x180 ou 192x192 -->
 
     <!-- Stylesheets -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -171,6 +172,17 @@
                 <button id="confirm-button" class="modal-button login bg-red-600 hover:bg-red-700">Confirmar</button>
                 <button id="cancel-button-modal" class="modal-button register">Cancelar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Offline Dialog -->
+    <div id="offline-dialog" class="hidden fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-[10000]">
+        <div class="text-center text-white p-8 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m-12.728 0a9 9 0 010-12.728m12.728 0L5.636 18.364m12.728 0L5.636 5.636" />
+            </svg>
+            <h2 class="text-2xl font-bold mb-2">Você está offline</h2>
+            <p>Por favor, verifique sua conexão com a internet para continuar usando o aplicativo.</p>
         </div>
     </div>
 

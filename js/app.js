@@ -186,10 +186,15 @@ function setupAppEventListeners() {
         shareButton.addEventListener('click', async () => {
             if (navigator.share) {
                 try {
+                    // Buscar o start_url do manifest.json
+                    const response = await fetch('manifest.json');
+                    const manifest = await response.json();
+                    const shareUrl = manifest.start_url || window.location.href;
+
                     await navigator.share({
                         title: 'Via Já',
                         text: 'Confira este incrível aplicativo de mobilidade!',
-                        url: window.location.href
+                        url: shareUrl
                     });
                     showPushNotification('Aplicativo compartilhado com sucesso!', 'success');
                 } catch (error) {
@@ -346,5 +351,27 @@ window.onload = () => {
         setupAuthEventListeners();
         setupInitialEventListeners();
         checkAuthAndInitialize();
+        setupOnlineStatusChecker();
     }, 2000); // Mantém a splash por 2 segundos
 };
+
+function setupOnlineStatusChecker() {
+    const offlineDialog = document.getElementById('offline-dialog');
+
+    function updateOnlineStatus() {
+        if (navigator.onLine) {
+            offlineDialog.classList.add('hidden');
+        } else {
+            offlineDialog.classList.remove('hidden');
+        }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    // Verificação inicial
+    updateOnlineStatus();
+
+    // Verificação periódica para garantir
+    setInterval(updateOnlineStatus, 10000); // Verifica a cada 10 segundos
+}
