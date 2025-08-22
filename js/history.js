@@ -17,7 +17,7 @@ export function saveDestinationToHistory(place) {
     let history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
     history = history.filter(item => item.place_id !== place.place_id);
     history.unshift(place);
-    const shortHistory = history.slice(0, 10);
+    const shortHistory = history.slice(0, 5);
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(shortHistory));
     renderHistoryList();
 }
@@ -35,11 +35,11 @@ export function toggleFavorite(place) {
     if (isFavorite) {
         favorites = favorites.filter(item => item.place_id !== place.place_id);
     } else {
-        if (favorites.length < 10) { // Limita a 10 favoritos
+        if (favorites.length < 5) { // Limita a 5 favoritos
             favorites.push(place);
         } else {
             // Opcional: Notificar o usuário que o limite foi atingido
-            console.warn('Limite de 10 favoritos atingido.');
+            console.warn('Limite de 5 favoritos atingido.');
         }
     }
     localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));

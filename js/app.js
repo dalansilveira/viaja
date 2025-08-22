@@ -9,10 +9,47 @@ import { setupAuthEventListeners } from './auth.js';
 import { setupPWA } from './pwa.js';
 
 function clearFieldsAndMap() {
+    // Limpa o estado da origem
     state.setCurrentOrigin(null);
-    state.setCurrentDestination(null);
+    if (state.originMarker) {
+        state.map.removeLayer(state.originMarker);
+        state.setOriginMarker(null);
+    }
     dom.originInput.value = '';
-    dom.destinationInput.value = '';
+
+    // Limpa todos os destinos
+    const destinationContainer = dom.destinationContainer;
+    const destinationItems = destinationContainer.querySelectorAll('.destination-item');
+    
+    // Remove todos os itens de destino, exceto o primeiro
+    destinationItems.forEach((item, index) => {
+        if (index > 0) {
+            item.remove();
+        }
+    });
+
+    // Limpa o primeiro campo de destino
+    const firstDestinationInput = destinationContainer.querySelector('.destination-input');
+    if (firstDestinationInput) {
+        firstDestinationInput.value = '';
+        delete firstDestinationInput.dataset.lat;
+        delete firstDestinationInput.dataset.lng;
+    }
+
+    // Remove todos os marcadores de destino do mapa e do estado
+    if (state.destinationMarkers) {
+        Object.keys(state.destinationMarkers).forEach(id => {
+            state.removeDestinationMarker(id);
+        });
+    }
+    state.setCurrentDestination(null);
+
+
+    // Limpa a rota e a UI
+    if (state.routeControl) {
+        state.map.removeControl(state.routeControl);
+        state.setRouteControl(null);
+    }
     dom.submitButton.disabled = true;
     state.resetTripData();
     dom.estimatedDistanceTimeEl.textContent = '';
@@ -22,14 +59,6 @@ function clearFieldsAndMap() {
     dom.vehicleButtons.forEach(button => {
         button.querySelector('.vehicle-price').textContent = '';
     });
-
-    if (state.originMarker) state.map.removeLayer(state.originMarker);
-    if (state.destinationMarker) state.map.removeLayer(state.destinationMarker);
-    if (state.routeControl) state.map.removeControl(state.routeControl);
-
-    state.setOriginMarker(null);
-    state.setDestinationMarker(null);
-    state.setRouteControl(null);
     
     toggleMapVisibility(false);
 }
@@ -214,7 +243,7 @@ function setupEventListeners() {
         removeButton.title = 'Remover parada';
         removeButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>`;
         removeButton.addEventListener('click', () => {
-            state.removeDestinationMarker(destId);
+            state.removeDestinationMarker(destId, state.map);
             newItem.remove();
             traceRoute();
         });

@@ -48,7 +48,7 @@ export function initializeMap(lat, lng, isDark) {
  * @param {string} type - Tipo de marcador ('origin' ou 'destination').
  * @param {string} name - Nome para a tooltip do marcador.
  */
-export function addOrMoveMarker(coords, type, name, id = null) {
+export function addOrMoveMarker(coords, type, name, id = null, number = null) {
     let marker;
 
     if (type === 'origin') {
@@ -57,19 +57,26 @@ export function addOrMoveMarker(coords, type, name, id = null) {
         marker = state.destinationMarkers[id];
     }
 
+    const pinClass = type === 'origin' ? 'pin-blue-svg' : 'pin-green-svg';
+    const numberHtml = number ? `<span class="marker-number">${number}</span>` : '';
+    const markerHtml = `<div class="marker-container">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-8 h-8 ${pinClass}">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                            </svg>
+                            ${numberHtml}
+                        </div>`;
+    
+    const customIcon = L.divIcon({
+        html: markerHtml,
+        className: 'leaflet-div-icon',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32]
+    });
+
     if (marker) {
         marker.setLatLng(coords);
+        marker.setIcon(customIcon);
     } else {
-        const pinClass = type === 'origin' ? 'pin-blue-svg' : 'pin-green-svg';
-        const markerHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-8 h-8 ${pinClass}">
-                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                            </svg>`;
-        const customIcon = L.divIcon({
-            html: markerHtml,
-            className: 'leaflet-div-icon',
-            iconSize: [20, 20],
-            iconAnchor: [10, 20]
-        });
         marker = L.marker(coords, { icon: customIcon }).addTo(state.map).bindTooltip(name, { permanent: false, direction: 'top' });
 
         if (type === 'origin') {
@@ -89,15 +96,21 @@ export function traceRoute() {
         state.setRouteControl(null);
     }
 
+    const destinationInputs = dom.destinationContainer.querySelectorAll('.destination-input');
+    const hasMultipleStops = destinationInputs.length > 1;
+    
     const waypoints = [];
     if (state.currentOrigin) {
         waypoints.push(L.latLng(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng));
+        addOrMoveMarker(state.currentOrigin.latlng, 'origin', 'Origem', null, hasMultipleStops ? 1 : null);
     }
 
-    const destinationInputs = dom.destinationContainer.querySelectorAll('.destination-input');
-    destinationInputs.forEach(input => {
+    destinationInputs.forEach((input, index) => {
         if (input.dataset.lat && input.dataset.lng) {
-            waypoints.push(L.latLng(parseFloat(input.dataset.lat), parseFloat(input.dataset.lng)));
+            const latlng = L.latLng(parseFloat(input.dataset.lat), parseFloat(input.dataset.lng));
+            waypoints.push(latlng);
+            const destId = input.dataset.id || `dest_${index}`; // Fallback
+            addOrMoveMarker(latlng, 'destination', `Destino ${index + 2}`, destId, hasMultipleStops ? index + 2 : null);
         }
     });
 

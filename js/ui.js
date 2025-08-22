@@ -157,15 +157,17 @@ export async function handleMapClick(e) {
         state.setCurrentOrigin({ latlng, data: fullAddressData });
     } else {
         // A lógica de múltiplos destinos é tratada pelo dataset agora.
-        // Apenas salvamos no histórico se for um destino.
         state.setCurrentDestination({ latlng, data: fullAddressData });
-        saveDestinationToHistory(fullAddressData);
     }
 
     if (state.currentOrigin && state.currentDestination) {
         traceRoute();
         dom.submitButton.disabled = false;
     }
+
+    // Desativa o modo de seleção após o clique
+    state.setCurrentSelectionMode(null);
+    dom.mapMessage.style.display = 'none';
 }
 
 /**
@@ -200,9 +202,7 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
                     state.setCurrentOrigin({ latlng, data: place });
                     addOrMoveMarker(latlng, 'origin', 'Origem');
                 } else {
-                    // Para destinos, a lógica de múltiplos marcadores será necessária
-                    // Aqui, apenas salvamos no histórico
-                    saveDestinationToHistory(place);
+                    state.setCurrentDestination({ latlng, data: place });
                 }
 
                 traceRoute();
