@@ -564,3 +564,12 @@ body.dark #destination-history-list button:hover {
     white-space: nowrap;
     max-width: 200px; /* Ajuste este valor conforme necessário */
 }
+
+/* Estilos para Drag and Drop */
+.drag-handle {
+    cursor: grab;
+    color: #9ca3af; /* gray-400 */
+}
+.destination-item:first-child .drag-handle {
+    display: none;
+}

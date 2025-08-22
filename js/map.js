@@ -48,9 +48,15 @@ export function initializeMap(lat, lng, isDark) {
  * @param {string} type - Tipo de marcador ('origin' ou 'destination').
  * @param {string} name - Nome para a tooltip do marcador.
  */
-export function addOrMoveMarker(coords, type, name) {
-    let marker = (type === 'origin') ? state.originMarker : state.destinationMarker;
-    
+export function addOrMoveMarker(coords, type, name, id = null) {
+    let marker;
+
+    if (type === 'origin') {
+        marker = state.originMarker;
+    } else if (id && state.destinationMarkers[id]) {
+        marker = state.destinationMarkers[id];
+    }
+
     if (marker) {
         marker.setLatLng(coords);
     } else {
@@ -68,60 +74,73 @@ export function addOrMoveMarker(coords, type, name) {
 
         if (type === 'origin') {
             state.setOriginMarker(marker);
-        } else {
-            state.setDestinationMarker(marker);
+        } else if (id) {
+            state.addDestinationMarker(id, marker);
         }
     }
 }
 
 /**
- * Traça uma rota entre a origem e o destino no mapa.
+ * Traça uma rota entre a origem e todos os destinos no mapa, na ordem correta.
  */
 export function traceRoute() {
     if (state.routeControl) {
         state.map.removeControl(state.routeControl);
+        state.setRouteControl(null);
     }
-    if (state.currentOrigin && state.currentDestination) {
-        const control = L.Routing.control({
-            waypoints: [
-                L.latLng(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng),
-                L.latLng(state.currentDestination.latlng.lat, state.currentDestination.latlng.lng)
-            ],
-            lineOptions: {
-                styles: [{color: '#3b82f6', weight: 6, opacity: 0.7}]
-            },
-            createMarker: function() { return null; },
-            show: false,
-            addWaypoints: false,
-            routeWhileDragging: true,
-            collapsible: false,
-            showAlternatives: false
-        }).addTo(state.map);
 
-        control.on('routesfound', function(e) {
-            const route = e.routes[0];
-            const distanceMeters = route.summary.totalDistance;
-            const timeSeconds = route.summary.totalTime;
+    const waypoints = [];
+    if (state.currentOrigin) {
+        waypoints.push(L.latLng(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng));
+    }
 
-            state.tripData.distance = distanceMeters / 1000;
-            state.tripData.time = timeSeconds;
+    const destinationInputs = dom.destinationContainer.querySelectorAll('.destination-input');
+    destinationInputs.forEach(input => {
+        if (input.dataset.lat && input.dataset.lng) {
+            waypoints.push(L.latLng(parseFloat(input.dataset.lat), parseFloat(input.dataset.lng)));
+        }
+    });
 
-            const formattedTime = formatTime(timeSeconds);
-            const routeInfoText = `Distância: ${state.tripData.distance.toFixed(2)} km | Tempo Aprox.: ${formattedTime}`;
-            
-            dom.routeInfoDisplay.textContent = routeInfoText;
-            dom.routeInfoDisplay.classList.remove('hidden');
-            dom.estimatedDistanceTimeEl.textContent = routeInfoText;
-            
-            dom.vehicleButtons.forEach(button => {
-                const vehicleType = button.dataset.vehicle;
-                const price = estimateFare(state.tripData.distance, vehicleType);
-                button.querySelector('.vehicle-price').textContent = price;
-            });
-            
-            state.map.fitBounds(route.coordinates, { padding: [50, 50] });
+    if (waypoints.length < 2) {
+        return;
+    }
+
+    const control = L.Routing.control({
+        waypoints: waypoints,
+        lineOptions: {
+            styles: [{color: '#3b82f6', weight: 6, opacity: 0.7}]
+        },
+        createMarker: function() { return null; },
+        show: false,
+        addWaypoints: false,
+        routeWhileDragging: true,
+        collapsible: false,
+        showAlternatives: false
+    }).addTo(state.map);
+
+    control.on('routesfound', function(e) {
+        const route = e.routes[0];
+        const distanceMeters = route.summary.totalDistance;
+        const timeSeconds = route.summary.totalTime;
+
+        state.tripData.distance = distanceMeters / 1000;
+        state.tripData.time = timeSeconds;
+
+        const formattedTime = formatTime(timeSeconds);
+        const routeInfoText = `Distância: ${state.tripData.distance.toFixed(2)} km | Tempo Aprox.: ${formattedTime}`;
+        
+        dom.routeInfoDisplay.textContent = routeInfoText;
+        dom.routeInfoDisplay.classList.remove('hidden');
+        dom.estimatedDistanceTimeEl.textContent = routeInfoText;
+        
+        dom.vehicleButtons.forEach(button => {
+            const vehicleType = button.dataset.vehicle;
+            const price = estimateFare(state.tripData.distance, vehicleType);
+            button.querySelector('.vehicle-price').textContent = price;
         });
+        
+        state.map.fitBounds(route.coordinates, { padding: [50, 50] });
+    });
 
-        state.setRouteControl(control);
-    }
+    state.setRouteControl(control);
 }

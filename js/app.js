@@ -83,7 +83,62 @@ async function handleCurrentLocation() {
     );
 }
 
+function setupDragAndDrop() {
+    const container = dom.destinationContainer;
+    let draggedItem = null;
+
+    container.addEventListener('dragstart', (e) => {
+        // Permite arrastar apenas se não for o primeiro item
+        if (e.target.classList.contains('destination-item') && e.target !== container.querySelector('.destination-item')) {
+            draggedItem = e.target;
+            setTimeout(() => {
+                draggedItem.style.opacity = '0.5';
+            }, 0);
+        } else {
+            e.preventDefault();
+        }
+    });
+
+    container.addEventListener('dragend', (e) => {
+        if (draggedItem) {
+            setTimeout(() => {
+                draggedItem.style.opacity = '1';
+                draggedItem = null;
+            }, 0);
+        }
+    });
+
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(container, e.clientY);
+        if (afterElement == null) {
+            container.appendChild(draggedItem);
+        } else {
+            container.insertBefore(draggedItem, afterElement);
+        }
+    });
+
+    container.addEventListener('drop', () => {
+        traceRoute();
+    });
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.destination-item:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+}
+
 function setupEventListeners() {
+    setupDragAndDrop();
     dom.submitButton.addEventListener('click', () => {
         if (state.currentOrigin && state.currentDestination) {
             switchPanel('vehicle-selection-panel');
@@ -102,6 +157,73 @@ function setupEventListeners() {
     dom.selectDestinationButton.addEventListener('click', () => {
         state.setCurrentSelectionMode('destination');
         toggleMapVisibility(true);
+    });
+
+    dom.addDestinationButton.addEventListener('click', () => {
+        const destinationContainer = dom.destinationContainer;
+        const allDestinationInputs = destinationContainer.querySelectorAll('.destination-input');
+
+        let allFilled = true;
+        allDestinationInputs.forEach(input => {
+            if (input.value.trim() === '') {
+                allFilled = false;
+            }
+        });
+
+        if (!allFilled) {
+            showPushNotification('Preencha todas as paradas antes de adicionar uma nova.', 'warning');
+            return;
+        }
+
+        const originalItem = destinationContainer.querySelector('.destination-item');
+        const newItem = originalItem.cloneNode(true);
+        const destId = `dest_${Date.now()}`;
+
+        newItem.classList.add('mt-2');
+        newItem.dataset.id = destId;
+
+        const newInput = newItem.querySelector('.destination-input');
+        newInput.value = '';
+        newInput.id = `destination-input-${destId}`;
+        newInput.dataset.id = destId;
+
+        const newSuggestions = newItem.querySelector('.autocomplete-suggestions');
+        newSuggestions.id = `destination-suggestions-${destId}`;
+        newSuggestions.innerHTML = '';
+        newInput.addEventListener('input', debounce((e) => displayAddressSuggestions(e.target, newSuggestions), 300));
+
+        const buttonContainer = newItem.querySelector('.flex');
+        const selectOnMapButton = newItem.querySelector('#select-destination-button');
+        if (selectOnMapButton) {
+            selectOnMapButton.id = `select-destination-button-${destId}`;
+            selectOnMapButton.addEventListener('click', () => {
+                state.setCurrentSelectionMode('destination');
+                state.setActiveDestinationInput(newInput);
+                toggleMapVisibility(true);
+            });
+        }
+
+        const addButton = newItem.querySelector('#add-destination-button');
+        if (addButton) {
+            addButton.remove();
+        }
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'select-in-field-button';
+        removeButton.title = 'Remover parada';
+        removeButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>`;
+        removeButton.addEventListener('click', () => {
+            state.removeDestinationMarker(destId);
+            newItem.remove();
+            traceRoute();
+        });
+        
+        if (buttonContainer) {
+            buttonContainer.appendChild(removeButton);
+        }
+
+        destinationContainer.appendChild(newItem);
     });
 
     dom.vehicleButtons.forEach(button => {
@@ -137,12 +259,22 @@ function setupEventListeners() {
     dom.destinationInput.addEventListener('input', debounce((e) => displayAddressSuggestions(e.target, dom.destinationSuggestions), 300));
 
     document.addEventListener('click', (e) => {
+        // Se o clique não foi dentro de um input de origem ou de seu container de sugestões
         if (!dom.originInput.contains(e.target) && !dom.originSuggestions.contains(e.target)) {
             dom.originSuggestions.style.display = 'none';
         }
-        if (!dom.destinationInput.contains(e.target) && !dom.destinationSuggestions.contains(e.target)) {
-            dom.destinationSuggestions.style.display = 'none';
-        }
+
+        // Itera sobre todos os itens de destino
+        const destinationItems = dom.destinationContainer.querySelectorAll('.destination-item');
+        destinationItems.forEach(item => {
+            const input = item.querySelector('.destination-input');
+            const suggestions = item.querySelector('.autocomplete-suggestions');
+            if (input && suggestions) {
+                if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+                    suggestions.style.display = 'none';
+                }
+            }
+        });
     });
 
     dom.themeToggle.addEventListener('click', () => {

@@ -16,6 +16,8 @@ export const dom = {
     currentLocationButton: document.getElementById('current-location-button'),
     selectOriginButton: document.getElementById('select-origin-button'),
     selectDestinationButton: document.getElementById('select-destination-button'),
+    addDestinationButton: document.getElementById('add-destination-button'),
+    destinationContainer: document.getElementById('destination-container'),
     messageBox: document.getElementById('message-box'),
     mapMessage: document.getElementById('map-message'),
     vehicleButtons: document.querySelectorAll('.vehicle-button'),

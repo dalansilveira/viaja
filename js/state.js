@@ -1,11 +1,13 @@
 export let map;
-export let originMarker, destinationMarker;
+export let originMarker;
+export let destinationMarkers = {};
 export let routeControl;
 export let currentOrigin = null;
-export let currentDestination = null;
+export let currentDestination = null; // Pode ser usado para o destino final
 export let currentSelectionMode = null;
 export let deferredPrompt = null;
 export let currentUserCoords = null;
+export let activeDestinationInput = null;
 
 export const tripData = {
     distance: 0,
@@ -31,8 +33,15 @@ export function setOriginMarker(marker) {
     originMarker = marker;
 }
 
-export function setDestinationMarker(marker) {
-    destinationMarker = marker;
+export function addDestinationMarker(id, marker) {
+    destinationMarkers[id] = marker;
+}
+
+export function removeDestinationMarker(id) {
+    if (destinationMarkers[id]) {
+        map.removeLayer(destinationMarkers[id]);
+        delete destinationMarkers[id];
+    }
 }
 
 export function setRouteControl(control) {
@@ -57,6 +66,10 @@ export function setDeferredPrompt(prompt) {
 
 export function setCurrentUserCoords(coords) {
     currentUserCoords = coords;
+}
+
+export function setActiveDestinationInput(input) {
+    activeDestinationInput = input;
 }
 
 export function resetTripData() {

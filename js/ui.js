@@ -128,7 +128,16 @@ export async function handleMapClick(e) {
 
     const latlng = e.latlng;
     const type = state.currentSelectionMode;
-    const inputEl = (type === 'origin') ? dom.originInput : dom.destinationInput;
+    
+    let inputEl;
+    if (type === 'origin') {
+        inputEl = dom.originInput;
+    } else if (type === 'destination') {
+        inputEl = state.activeDestinationInput || dom.destinationInput;
+    }
+
+    if (!inputEl) return;
+
     const name = (type === 'origin') ? 'Origem' : 'Destino';
 
     addOrMoveMarker(latlng, type, name);
@@ -140,9 +149,15 @@ export async function handleMapClick(e) {
     inputEl.value = addressText;
     fullAddressData.display_name = addressText;
 
+    // Adiciona as coordenadas ao dataset do input para o traceRoute funcionar
+    inputEl.dataset.lat = latlng.lat;
+    inputEl.dataset.lng = latlng.lng;
+
     if (type === 'origin') {
         state.setCurrentOrigin({ latlng, data: fullAddressData });
     } else {
+        // A lógica de múltiplos destinos é tratada pelo dataset agora.
+        // Apenas salvamos no histórico se for um destino.
         state.setCurrentDestination({ latlng, data: fullAddressData });
         saveDestinationToHistory(fullAddressData);
     }
@@ -178,20 +193,20 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
                 suggestionsEl.style.display = 'none';
                 
                 const latlng = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
+                inputEl.dataset.lat = latlng.lat;
+                inputEl.dataset.lng = latlng.lng;
 
                 if (inputEl.id === 'origin-input') {
                     state.setCurrentOrigin({ latlng, data: place });
                     addOrMoveMarker(latlng, 'origin', 'Origem');
                 } else {
-                    state.setCurrentDestination({ latlng, data: place });
-                    addOrMoveMarker(latlng, 'destination', 'Destino');
+                    // Para destinos, a lógica de múltiplos marcadores será necessária
+                    // Aqui, apenas salvamos no histórico
                     saveDestinationToHistory(place);
                 }
 
-                if (state.currentOrigin && state.currentDestination) {
-                    traceRoute();
-                    dom.submitButton.disabled = false;
-                }
+                traceRoute();
+                dom.submitButton.disabled = !state.currentOrigin;
                 
                 if (!dom.mapContainer.classList.contains('visible')) {
                     toggleMapVisibility(true);

@@ -177,18 +177,32 @@
                     </div>
                 </div>
                 <div id="origin-suggestions" class="autocomplete-suggestions"></div>
-                <div class="input-group">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                    </svg>
-                    <input id="destination-input" type="text" placeholder="Destino" autocomplete="off">
-                    <button type="button" id="select-destination-button" class="select-in-field-button" title="Selecionar no mapa">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
+                <div id="destination-container">
+                    <div class="destination-item" draggable="true">
+                        <div class="input-group">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 drag-handle" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                            </svg>
+                            <input id="destination-input" type="text" placeholder="Destino" autocomplete="off" class="destination-input">
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="select-destination-button" class="select-in-field-button" title="Selecionar no mapa">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button type="button" id="add-destination-button" class="select-in-field-button" title="Adicionar parada">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="destination-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
                 </div>
-                <div id="destination-suggestions" class="autocomplete-suggestions"></div>
 
                 <!-- Histórico de Destinos -->
                 <div id="destination-history" class="mt-2 hidden">
