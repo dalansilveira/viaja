@@ -4,39 +4,22 @@ import { debounce, formatTime, formatPlaceForDisplay, estimateFare } from './uti
 import { getLocationByIP, reverseGeocode } from './api.js';
 import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme } from './map.js';
 import { displayAddressSuggestions, toggleMapVisibility, switchPanel, showPushNotification, toggleTheme } from './ui.js';
-import { renderHistoryList } from './history.js';
+import { renderHistoryList, saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
 import { setupPWA } from './pwa.js';
 
 function clearFieldsAndMap() {
-    // Limpa o estado da origem
+    // 1. Limpar estado e marcador de origem
     state.setCurrentOrigin(null);
     if (state.originMarker) {
         state.map.removeLayer(state.originMarker);
         state.setOriginMarker(null);
     }
     dom.originInput.value = '';
+    delete dom.originInput.dataset.lat;
+    delete dom.originInput.dataset.lng;
 
-    // Limpa todos os destinos
-    const destinationContainer = dom.destinationContainer;
-    const destinationItems = destinationContainer.querySelectorAll('.destination-item');
-    
-    // Remove todos os itens de destino, exceto o primeiro
-    destinationItems.forEach((item, index) => {
-        if (index > 0) {
-            item.remove();
-        }
-    });
-
-    // Limpa o primeiro campo de destino
-    const firstDestinationInput = destinationContainer.querySelector('.destination-input');
-    if (firstDestinationInput) {
-        firstDestinationInput.value = '';
-        delete firstDestinationInput.dataset.lat;
-        delete firstDestinationInput.dataset.lng;
-    }
-
-    // Remove todos os marcadores de destino do mapa e do estado
+    // 2. Limpar estado e marcadores de destino
     if (state.destinationMarkers) {
         Object.keys(state.destinationMarkers).forEach(id => {
             state.removeDestinationMarker(id);
@@ -44,8 +27,24 @@ function clearFieldsAndMap() {
     }
     state.setCurrentDestination(null);
 
+    // 3. Limpar UI dos destinos
+    const destinationContainer = dom.destinationContainer;
+    const destinationItems = destinationContainer.querySelectorAll('.destination-item');
+    
+    destinationItems.forEach((item, index) => {
+        if (index > 0) {
+            item.remove();
+        }
+    });
 
-    // Limpa a rota e a UI
+    const firstDestinationInput = destinationContainer.querySelector('.destination-input');
+    if (firstDestinationInput) {
+        firstDestinationInput.value = '';
+        delete firstDestinationInput.dataset.lat;
+        delete firstDestinationInput.dataset.lng;
+    }
+
+    // 4. Limpar a rota do mapa e da UI
     if (state.routeControl) {
         state.map.removeControl(state.routeControl);
         state.setRouteControl(null);
@@ -170,6 +169,10 @@ function setupEventListeners() {
     setupDragAndDrop();
     dom.submitButton.addEventListener('click', () => {
         if (state.currentOrigin && state.currentDestination) {
+            // Salva o destino primário no histórico ao solicitar a corrida
+            if (state.currentDestination.data) {
+                saveDestinationToHistory(state.currentDestination.data);
+            }
             switchPanel('vehicle-selection-panel');
             state.setCurrentSelectionMode(null);
         }
@@ -243,7 +246,7 @@ function setupEventListeners() {
         removeButton.title = 'Remover parada';
         removeButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>`;
         removeButton.addEventListener('click', () => {
-            state.removeDestinationMarker(destId, state.map);
+            state.removeDestinationMarker(destId);
             newItem.remove();
             traceRoute();
         });

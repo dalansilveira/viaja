@@ -38,8 +38,13 @@ export function addDestinationMarker(id, marker) {
 }
 
 export function removeDestinationMarker(id) {
-    if (destinationMarkers[id]) {
-        map.removeLayer(destinationMarkers[id]);
+    const marker = destinationMarkers[id];
+    if (marker) {
+        // Garante que o marcador seja removido do mapa apenas se existir
+        if (map && map.hasLayer(marker)) {
+            map.removeLayer(marker);
+        }
+        // Remove a referência do objeto de qualquer maneira
         delete destinationMarkers[id];
     }
 }
