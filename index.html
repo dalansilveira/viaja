@@ -37,6 +37,12 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="fixed inset-0 bg-white dark:bg-gray-900 flex flex-col items-center justify-center z-[9999] transition-opacity duration-500">
+        <img src="imgs/logo.png" alt="Logo Via Já" class="w-48 h-48 mb-8 animate-pulse pointer-events-none select-none" id="splash-logo" style="-webkit-user-drag: none;">
+        <div class="loader"></div>
+    </div>
+
     <!-- Modais fora do contêiner principal -->
     <div id="welcome-modal" class="fixed inset-0 z-50">
         <div class="bg-white dark:bg-gray-800 w-full h-full flex flex-col items-center justify-center p-4">

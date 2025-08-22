@@ -221,6 +221,7 @@ function checkAuthAndInitialize() {
         initializeApp();
     } else {
         dom.welcomeModal.style.display = 'flex';
+        dom.loginPhoneInput.focus(); // Foco no campo de telefone
     }
 }
 
@@ -271,12 +272,33 @@ async function initializeApp() {
         }
         dom.originInput.readOnly = false; // Permite edição em desktop
     }
+
+    // Foca no campo de destino após a inicialização
+    dom.destinationInput.focus();
 }
 
 window.onload = () => {
+    // Aplica o tema imediatamente para garantir que a splash screen tenha a aparência correta
     applyTheme();
-    // Configura os listeners de autenticação e do modal inicial
-    setupAuthEventListeners();
-    setupInitialEventListeners();
-    checkAuthAndInitialize();
+
+    const splashScreen = document.getElementById('splash-screen');
+    
+    // Garante que a splash screen esteja visível no início
+    splashScreen.style.opacity = '1';
+
+    // Simula o carregamento de preferências e outros dados
+    setTimeout(() => {
+        // Inicia a transição de desaparecimento
+        splashScreen.style.opacity = '0';
+        
+        // Remove a splash screen do DOM após a transição para não interferir com cliques
+        splashScreen.addEventListener('transitionend', () => {
+            splashScreen.remove();
+        });
+
+        // Continua com a inicialização do app
+        setupAuthEventListeners();
+        setupInitialEventListeners();
+        checkAuthAndInitialize();
+    }, 2000); // Mantém a splash por 2 segundos
 };

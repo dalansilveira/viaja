@@ -17,10 +17,32 @@ export function setupAuthEventListeners() {
     dom.authMenuProfile.addEventListener('click', () => {
         dom.authMenu.classList.add('hidden');
         dom.profileModal.classList.remove('hidden');
-        // Preencher o telefone do usuário se estiver logado
+        
+        // Preenche o telefone do usuário se estiver logado
         const userPhone = localStorage.getItem('user_phone');
         if (userPhone) {
             dom.profilePhone.value = formatPhoneNumber(userPhone);
+        }
+
+        // Recupera e preenche os dados do perfil salvos
+        const savedProfile = localStorage.getItem('user_profile');
+        if (savedProfile) {
+            const profileData = JSON.parse(savedProfile);
+            dom.profileName.value = profileData.name || '';
+            dom.profileAddress.value = profileData.address || '';
+            dom.profileNeighborhood.value = profileData.neighborhood || '';
+            
+            if (profileData.picture) {
+                dom.profilePicture.src = profileData.picture;
+                dom.profilePicture.classList.remove('hidden');
+                document.getElementById('profile-placeholder-svg').classList.add('hidden');
+                dom.deleteProfilePictureButton.classList.remove('hidden');
+            } else {
+                dom.profilePicture.src = '';
+                dom.profilePicture.classList.add('hidden');
+                document.getElementById('profile-placeholder-svg').classList.remove('hidden');
+                dom.deleteProfilePictureButton.classList.add('hidden');
+            }
         }
     });
 
@@ -29,6 +51,15 @@ export function setupAuthEventListeners() {
     });
 
     dom.saveProfileButton.addEventListener('click', () => {
+        const profileData = {
+            name: dom.profileName.value,
+            address: dom.profileAddress.value,
+            neighborhood: dom.profileNeighborhood.value,
+            picture: dom.profilePicture.classList.contains('hidden') ? '' : dom.profilePicture.src
+        };
+
+        localStorage.setItem('user_profile', JSON.stringify(profileData));
+        
         showPushNotification("Perfil salvo com sucesso!", "success");
         dom.profileModal.classList.add('hidden');
     });
@@ -64,7 +95,7 @@ export function setupAuthEventListeners() {
         // Remove todos os dados do usuário do localStorage
         localStorage.removeItem('user_token');
         localStorage.removeItem('user_phone');
-        // Adicionar aqui a remoção de outros dados de perfil, se houver (ex: 'user_profile')
+        localStorage.removeItem('user_profile');
         
         showPushNotification("Você foi desconectado.", "info");
         
@@ -115,6 +146,7 @@ export function setupAuthEventListeners() {
         setTimeout(() => {
             dom.welcomeModal.style.display = 'none';
             dom.verifyCodeModal.classList.add('visible');
+            dom.verifyCodeInput.focus(); // Foco no campo de código
         }, 1000);
     });
 

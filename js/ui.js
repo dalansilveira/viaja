@@ -175,57 +175,95 @@ export async function handleMapClick(e) {
 }
 
 /**
- * Exibe e atualiza as sugestões de endereço.
+ * Exibe e atualiza as sugestões de endereço, incluindo histórico e favoritos.
  * @param {HTMLInputElement} inputEl - O elemento de input.
  * @param {HTMLDivElement} suggestionsEl - O container para as sugestões.
  */
 export async function displayAddressSuggestions(inputEl, suggestionsEl) {
-    const query = inputEl.value;
+    const query = inputEl.value.toLowerCase();
     suggestionsEl.innerHTML = '';
     suggestionsEl.style.display = 'none';
 
-    if (query.length < 3) return;
+    if (query.length < 2) return;
 
-    const results = await fetchAddressSuggestions(query);
+    const history = JSON.parse(localStorage.getItem('viaja_destination_history')) || [];
+    const favorites = JSON.parse(localStorage.getItem('viaja_favorite_destinations')) || [];
 
-    if (results.length > 0) {
-        results.forEach(place => {
-            const suggestionDiv = document.createElement('div');
-            suggestionDiv.textContent = place.display_name;
-            
-            suggestionDiv.addEventListener('click', () => {
-                inputEl.value = place.display_name;
-                suggestionsEl.innerHTML = '';
-                suggestionsEl.style.display = 'none';
-                
-                const latlng = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
-                inputEl.dataset.lat = latlng.lat;
-                inputEl.dataset.lng = latlng.lng;
+    const localResults = [...favorites, ...history];
+    const uniqueLocalResults = Array.from(new Map(localResults.map(item => [item.place_id, item])).values());
 
-                if (inputEl.id === 'origin-input') {
-                    state.setCurrentOrigin({ latlng, data: place });
-                    addOrMoveMarker(latlng, 'origin', 'Origem');
-                    dom.originInput.parentElement.classList.add('input-filled');
-                } else {
-                    state.setCurrentDestination({ latlng, data: place });
-                    addOrMoveMarker(latlng, 'destination', 'Destino');
-                    dom.destinationInput.closest('.input-group').classList.add('input-filled');
-                }
+    const filteredLocalResults = uniqueLocalResults.filter(place =>
+        place.display_name.toLowerCase().includes(query)
+    );
 
-                traceRoute();
-                if (state.currentOrigin && state.currentDestination) {
-                    dom.submitButton.disabled = false;
-                }
-                
-                if (!dom.mapContainer.classList.contains('visible')) {
-                    toggleMapVisibility(true);
-                }
-            });
+    const displayedPlaceIds = new Set();
 
-            suggestionsEl.appendChild(suggestionDiv);
+    // Renderiza os resultados locais
+    filteredLocalResults.forEach(place => {
+        const isFavorite = favorites.some(fav => fav.place_id === place.place_id);
+        const icon = isFavorite ? '⭐' : '🕒';
+        renderSuggestion(place, `${icon} ${place.display_name}`, inputEl, suggestionsEl);
+        displayedPlaceIds.add(place.place_id);
+    });
+
+    // Busca e renderiza os resultados da API
+    if (query.length >= 3) {
+        const apiResults = await fetchAddressSuggestions(query);
+        apiResults.forEach(place => {
+            if (!displayedPlaceIds.has(place.place_id)) {
+                renderSuggestion(place, place.display_name, inputEl, suggestionsEl);
+                displayedPlaceIds.add(place.place_id);
+            }
         });
+    }
+
+    if (suggestionsEl.children.length > 0) {
         suggestionsEl.style.display = 'block';
     }
+}
+
+/**
+ * Renderiza um único item de sugestão.
+ * @param {object} place - O objeto do local.
+ * @param {string} displayText - O texto a ser exibido.
+ * @param {HTMLInputElement} inputEl - O elemento de input.
+ * @param {HTMLDivElement} suggestionsEl - O container para as sugestões.
+ */
+function renderSuggestion(place, displayText, inputEl, suggestionsEl) {
+    const suggestionDiv = document.createElement('div');
+    suggestionDiv.innerHTML = displayText; // Usa innerHTML para renderizar o ícone
+    suggestionDiv.className = 'suggestion-item'; // Adiciona uma classe para estilização
+
+    suggestionDiv.addEventListener('click', () => {
+        inputEl.value = place.display_name; // Usa o nome limpo sem o ícone
+        suggestionsEl.innerHTML = '';
+        suggestionsEl.style.display = 'none';
+
+        const latlng = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
+        inputEl.dataset.lat = latlng.lat;
+        inputEl.dataset.lng = latlng.lng;
+
+        if (inputEl.id === 'origin-input') {
+            state.setCurrentOrigin({ latlng, data: place });
+            addOrMoveMarker(latlng, 'origin', 'Origem');
+            dom.originInput.parentElement.classList.add('input-filled');
+        } else {
+            state.setCurrentDestination({ latlng, data: place });
+            addOrMoveMarker(latlng, 'destination', 'Destino');
+            dom.destinationInput.closest('.input-group').classList.add('input-filled');
+        }
+
+        traceRoute();
+        if (state.currentOrigin && state.currentDestination) {
+            dom.submitButton.disabled = false;
+        }
+
+        if (!dom.mapContainer.classList.contains('visible')) {
+            toggleMapVisibility(true);
+        }
+    });
+
+    suggestionsEl.appendChild(suggestionDiv);
 }
 
 /**
