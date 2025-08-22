@@ -1,6 +1,6 @@
 export let map;
 export let originMarker;
-export let destinationMarkers = {};
+export let destinationMarkers = [];
 export let routeControl;
 export let currentOrigin = null;
 export let currentDestination = null; // Pode ser usado para o destino final
@@ -34,18 +34,19 @@ export function setOriginMarker(marker) {
 }
 
 export function addDestinationMarker(id, marker) {
-    destinationMarkers[id] = marker;
+    // Remove qualquer marcador existente com o mesmo ID antes de adicionar um novo
+    removeDestinationMarker(id);
+    destinationMarkers.push({ id, marker });
 }
 
 export function removeDestinationMarker(id) {
-    const marker = destinationMarkers[id];
-    if (marker) {
-        // Garante que o marcador seja removido do mapa apenas se existir
+    const markerIndex = destinationMarkers.findIndex(m => m.id === id);
+    if (markerIndex > -1) {
+        const { marker } = destinationMarkers[markerIndex];
         if (map && map.hasLayer(marker)) {
             map.removeLayer(marker);
         }
-        // Remove a referência do objeto de qualquer maneira
-        delete destinationMarkers[id];
+        destinationMarkers.splice(markerIndex, 1);
     }
 }
 

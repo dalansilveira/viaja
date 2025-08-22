@@ -230,6 +230,11 @@ export function toggleTheme() {
     if (logoElement) {
         logoElement.src = isDark ? 'imgs/logodark.png' : 'imgs/logo.png';
     }
+
+    // Redesenha a rota para atualizar a cor
+    if (state.currentOrigin && state.currentDestination) {
+        traceRoute();
+    }
 }
 
 // Adiciona eventos de clique aos botões de histórico e favoritos

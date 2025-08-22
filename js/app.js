@@ -20,10 +20,12 @@ function clearFieldsAndMap() {
     delete dom.originInput.dataset.lng;
 
     // 2. Limpar estado e marcadores de destino
-    if (state.destinationMarkers) {
-        Object.keys(state.destinationMarkers).forEach(id => {
-            state.removeDestinationMarker(id);
-        });
+    if (state.destinationMarkers && state.destinationMarkers.length > 0) {
+        // Itera de trás para frente para remover os itens do array de forma segura
+        for (let i = state.destinationMarkers.length - 1; i >= 0; i--) {
+            const markerData = state.destinationMarkers[i];
+            state.removeDestinationMarker(markerData.id);
+        }
     }
     state.setCurrentDestination(null);
 

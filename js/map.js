@@ -53,14 +53,17 @@ export function addOrMoveMarker(coords, type, name, id = null, number = null) {
 
     if (type === 'origin') {
         marker = state.originMarker;
-    } else if (id && state.destinationMarkers[id]) {
-        marker = state.destinationMarkers[id];
+    } else if (id) {
+        const markerData = state.destinationMarkers.find(m => m.id === id);
+        if (markerData) {
+            marker = markerData.marker;
+        }
     }
 
     const pinClass = type === 'origin' ? 'pin-blue-svg' : 'pin-green-svg';
     const numberHtml = number ? `<span class="marker-number">${number}</span>` : '';
     const markerHtml = `<div class="marker-container">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-8 h-8 ${pinClass}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-10 h-10 ${pinClass} pin-shadow">
                                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                             </svg>
                             ${numberHtml}
@@ -69,8 +72,8 @@ export function addOrMoveMarker(coords, type, name, id = null, number = null) {
     const customIcon = L.divIcon({
         html: markerHtml,
         className: 'leaflet-div-icon',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32]
+        iconSize: [40, 40],
+        iconAnchor: [20, 40]
     });
 
     if (marker) {
@@ -118,10 +121,18 @@ export function traceRoute() {
         return;
     }
 
+    const isDarkMode = document.body.classList.contains('dark');
+    const routeColor = isDarkMode ? '#FFD700' : '#3b82f6';
+
     const control = L.Routing.control({
         waypoints: waypoints,
         lineOptions: {
-            styles: [{color: '#3b82f6', weight: 6, opacity: 0.7}]
+            styles: [
+                // Contorno (casing)
+                { color: 'black', opacity: 0.3, weight: 9 },
+                // Linha principal
+                { color: routeColor, weight: 6, opacity: 0.8 }
+            ]
         },
         createMarker: function() { return null; },
         show: false,

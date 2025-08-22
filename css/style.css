@@ -357,6 +357,10 @@ body.dark .notification-close:hover {
 .pin-green-svg {
     color: #22ac54;
 }
+
+.pin-shadow {
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
 #map-container {
     height: 0;
     opacity: 0;
