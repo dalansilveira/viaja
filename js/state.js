@@ -60,6 +60,9 @@ export function setCurrentOrigin(origin) {
 
 export function setCurrentDestination(destination) {
     currentDestination = destination;
+    if (destination && !destination.number) {
+        destination.number = ''; // Garante que a propriedade exista
+    }
 }
 
 export function setCurrentSelectionMode(mode) {

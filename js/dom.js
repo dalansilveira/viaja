@@ -5,6 +5,7 @@ export const dom = {
     rideStatusPanel: document.getElementById('ride-status-panel'),
     originInput: document.getElementById('origin-input'),
     destinationInput: document.getElementById('destination-input'),
+    destinationNumberInput: document.getElementById('destination-number-input'),
     originSuggestions: document.getElementById('origin-suggestions'),
     destinationSuggestions: document.getElementById('destination-suggestions'),
     destinationHistory: document.getElementById('destination-history'),

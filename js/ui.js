@@ -165,6 +165,21 @@ export async function handleMapClick(e) {
     inputEl.value = addressText;
     fullAddressData.display_name = addressText;
 
+    // Tenta extrair e preencher o número do endereço de forma mais robusta
+    if (type === 'destination') {
+        let houseNumber = '';
+        if (fullAddressData.address && fullAddressData.address.house_number) {
+            houseNumber = fullAddressData.address.house_number;
+        } else {
+            // Fallback: Tenta extrair o número do display_name (ex: "Rua ABC, 123")
+            const match = fullAddressData.display_name.match(/^(\d+),\s/);
+            if (match) {
+                houseNumber = match[1];
+            }
+        }
+        dom.destinationNumberInput.value = houseNumber;
+    }
+
     // Adiciona as coordenadas ao dataset do input para o traceRoute funcionar
     inputEl.dataset.lat = latlng.lat;
     inputEl.dataset.lng = latlng.lng;
@@ -253,6 +268,9 @@ function renderSuggestion(place, displayText, inputEl, suggestionsEl) {
 
     suggestionDiv.addEventListener('click', () => {
         inputEl.value = place.display_name; // Usa o nome limpo sem o ícone
+        if (inputEl.id === 'destination-input' && place.number) {
+            dom.destinationNumberInput.value = place.number;
+        }
         suggestionsEl.innerHTML = '';
         suggestionsEl.style.display = 'none';
 

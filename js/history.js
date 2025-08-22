@@ -14,6 +14,11 @@ let showFavoritesOnly = false; // Novo estado para controlar a exibição
 export function saveDestinationToHistory(place) {
     if (!place || !place.place_id) return;
 
+    // Adiciona o número do campo de input ao objeto do local antes de salvar
+    if (dom.destinationNumberInput) {
+        place.number = dom.destinationNumberInput.value;
+    }
+
     let history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
     history = history.filter(item => item.place_id !== place.place_id);
     history.unshift(place);
@@ -149,6 +154,7 @@ export function renderHistoryList() {
  */
 function handleHistorySelection(place) {
     dom.destinationInput.value = place.display_name;
+    dom.destinationNumberInput.value = place.number || '';
     const latlng = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
     state.setCurrentDestination({ latlng, data: place });
 

@@ -109,11 +109,27 @@ body {
     border: none;
     outline: none;
     padding: 0.75rem;
-    padding-left: calc(15px + 0.75rem); /* Adiciona espaço para a faixa lateral */
     resize: none;
     overflow-y: hidden;
     line-height: 1.5;
     color: var(--text-color);
+}
+
+.input-group .address-input {
+    padding-left: calc(15px + 0.75rem); /* Adiciona espaço para a faixa lateral */
+}
+
+.input-group .destination-input {
+    border-right: 1px solid var(--border-color);
+}
+
+.input-group .destination-number-input {
+    width: 5ch;
+    text-align: center;
+    border: none;
+    padding: 0.75rem 0.5rem;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .input-group-origin {
@@ -482,9 +498,6 @@ body.dark .pin-shadow {
     z-index: 1;
 }
 
-body.dark #map-container .leaflet-tile-pane {
-    filter: invert(80%) hue-rotate(1076deg) brightness(160%) contrast(120%) saturate(180%);
-}
 #map-container.visible {
     height: 60vh;
     opacity: 1;

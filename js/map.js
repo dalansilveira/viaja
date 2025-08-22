@@ -7,7 +7,7 @@ import { reverseGeocode, getLocationByIP } from './api.js';
 let currentTileLayer;
 
 /**
- * Define o tema do mapa (claro ou escuro).
+ * Define o tema do mapa (claro ou escuro) usando Stadia Maps.
  * @param {boolean} isDark - True para tema escuro, false para tema claro.
  */
 export function setMapTheme(isDark) {
@@ -17,12 +17,21 @@ export function setMapTheme(isDark) {
         state.map.removeLayer(currentTileLayer);
     }
 
-    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const apiKey = 'ee0be6db-d7a2-402c-bb48-6c0c1d155df6';
+    const styleId = isDark ? 'alidade_smooth_dark' : 'alidade_smooth';
+    const tileUrl = `https://tiles.stadiamaps.com/tiles/${styleId}/{z}/{x}/{y}.png?api_key=${apiKey}`;
+    const attribution = '© <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> © <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> © <a href="http://openstreetmap.org" target="_blank">OpenStreetMap</a> contributors';
 
     currentTileLayer = L.tileLayer(tileUrl, {
         maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
+        attribution: attribution
     }).addTo(state.map);
+
+    // Garante que o filtro de inversão de cor seja removido, caso exista
+    const tilePane = state.map.getPane('tilePane');
+    if (tilePane) {
+        tilePane.style.filter = 'none';
+    }
 }
 
 /**
@@ -48,8 +57,14 @@ export function initializeMap(lat, lng, isDark) {
  * @param {object} coords - Coordenadas do marcador.
  * @param {string} type - Tipo de marcador ('origin' ou 'destination').
  * @param {string} name - Nome para a tooltip do marcador.
+ * @param {boolean} isDraggable - Se o marcador pode ser arrastado.
  */
-export function addOrMoveMarker(coords, type, name) {
+export function addOrMoveMarker(coords, type, name, isDraggable = true) {
+    // Se o rastreamento de localização estiver ativo, o marcador de origem nunca deve ser arrastável.
+    if (type === 'origin' && state.isTrackingLocation) {
+        isDraggable = false;
+    }
+
     let marker = type === 'origin' ? state.originMarker : state.destinationMarker;
 
     const pinClass = type === 'origin' ? 'pin-blue-svg' : 'pin-green-svg';
@@ -69,10 +84,13 @@ export function addOrMoveMarker(coords, type, name) {
     if (marker) {
         marker.setLatLng(coords);
         marker.setIcon(customIcon);
+        if (marker.dragging) {
+            isDraggable ? marker.dragging.enable() : marker.dragging.disable();
+        }
     } else {
         marker = L.marker(coords, { 
             icon: customIcon,
-            draggable: true 
+            draggable: isDraggable 
         }).addTo(state.map);
 
         marker.on('dragstart', () => {
@@ -232,15 +250,19 @@ export function startLocationTracking() {
         stopLocationTracking();
     }
 
-    const handlePositionUpdate = (lat, lng) => {
+    const handlePositionUpdate = async (lat, lng) => {
         const newLatLng = { lat, lng };
         state.setCurrentUserCoords(newLatLng);
 
-        if (state.originMarker) {
-            state.originMarker.setLatLng(newLatLng);
-        } else {
-            addOrMoveMarker(newLatLng, 'origin', 'Sua Localização');
-        }
+        // Atualiza o marcador de origem, tornando-o não arrastável
+        addOrMoveMarker(newLatLng, 'origin', 'Sua Localização', false);
+
+        // Atualiza o campo de texto de origem com o novo endereço
+        const fullAddressData = await reverseGeocode(lat, lng);
+        const addressText = formatPlaceForDisplay(fullAddressData) || 'Localização atual';
+        fullAddressData.display_name = addressText;
+        state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
+        dom.originInput.value = addressText;
 
         state.map.panTo(newLatLng);
 
@@ -255,7 +277,6 @@ export function startLocationTracking() {
         },
         async (error) => {
             console.error("Erro no rastreamento de localização por GPS: ", error);
-            // Fallback para GeoIP
             try {
                 const ipLocation = await getLocationByIP();
                 if (ipLocation) {
@@ -287,5 +308,10 @@ export function stopLocationTracking() {
         navigator.geolocation.clearWatch(state.locationWatchId);
         state.setLocationWatchId(null);
         state.setIsTrackingLocation(false);
+
+        // Torna o marcador de origem arrastável novamente
+        if (state.originMarker && state.originMarker.dragging) {
+            state.originMarker.dragging.enable();
+        }
     }
 }

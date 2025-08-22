@@ -28,6 +28,7 @@ function clearFieldsAndMap() {
         state.setDestinationMarker(null);
     }
     dom.destinationInput.value = '';
+    dom.destinationNumberInput.value = '';
     delete dom.destinationInput.dataset.lat;
     delete dom.destinationInput.dataset.lng;
     dom.destinationInput.closest('.input-group').classList.remove('input-filled');
@@ -104,6 +105,12 @@ function setupAppEventListeners() {
     dom.clearButton.addEventListener('click', clearFieldsAndMap);
 
     dom.selectOriginButton.addEventListener('click', () => {
+        // Se o rastreamento estiver ativo, desative-o primeiro.
+        if (state.isTrackingLocation) {
+            stopLocationTracking();
+            dom.toggleLocationButton.classList.remove('active');
+        }
+
         const newMode = state.currentSelectionMode === 'origin' ? null : 'origin';
         state.setCurrentSelectionMode(newMode);
         setSelectionButtonState(newMode);
@@ -150,6 +157,12 @@ function setupAppEventListeners() {
 
     dom.originInput.addEventListener('input', debounce((e) => displayAddressSuggestions(e.target, dom.originSuggestions), 300));
     dom.destinationInput.addEventListener('input', debounce((e) => displayAddressSuggestions(e.target, dom.destinationSuggestions), 300));
+    dom.destinationNumberInput.addEventListener('input', () => {
+        if (state.currentDestination) {
+            state.currentDestination.number = dom.destinationNumberInput.value;
+            saveAppState();
+        }
+    });
 
     document.addEventListener('click', (e) => {
         // Se o clique não foi dentro de um input de origem ou de seu container de sugestões
@@ -167,6 +180,27 @@ function setupAppEventListeners() {
         setMapTheme(document.body.classList.contains('dark'));
     });
     dom.toggleMapButton.addEventListener('click', () => toggleMapVisibility(null, true));
+
+    const shareButton = document.getElementById('share-button');
+    if (shareButton) {
+        shareButton.addEventListener('click', async () => {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Via Já',
+                        text: 'Confira este incrível aplicativo de mobilidade!',
+                        url: window.location.href
+                    });
+                    showPushNotification('Aplicativo compartilhado com sucesso!', 'success');
+                } catch (error) {
+                    console.error('Erro ao compartilhar:', error);
+                    showPushNotification('Erro ao compartilhar o aplicativo.', 'error');
+                }
+            } else {
+                showPushNotification('A função de compartilhamento não é suportada neste navegador.', 'info');
+            }
+        });
+    }
 
     document.querySelectorAll('.address-textarea').forEach(textarea => {
         textarea.addEventListener('input', () => {
@@ -189,6 +223,7 @@ function restoreUIFromState() {
 
     if (state.currentDestination) {
         dom.destinationInput.value = state.currentDestination.data.display_name;
+        dom.destinationNumberInput.value = state.currentDestination.number || '';
         addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino');
         dom.destinationInput.closest('.input-group').classList.add('input-filled');
     }
