@@ -70,5 +70,6 @@ export const dom = {
     profileAddress: document.getElementById('profile-address'),
     profileNeighborhood: document.getElementById('profile-neighborhood'),
     saveProfileButton: document.getElementById('save-profile-button'),
-    toggleLocationButton: document.getElementById('toggle-location-button')
+    toggleLocationButton: document.getElementById('toggle-location-button'),
+    recenterMapButton: document.getElementById('recenter-map-button')
 };

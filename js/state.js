@@ -21,8 +21,6 @@ export const tripData = {
     vehicle: ''
 };
 
-export const defaultCoords = [-18.5807, -46.5160];
-
 export const vehicleRates = {
     'Moto': { base: 6.00, perKm: 1.50, minFare: 8.00 },
     'Carro': { base: 8.00, perKm: 2.50, minFare: 12.00 },
@@ -56,6 +54,7 @@ export function setEndCircle(circle) {
 
 export function setCurrentOrigin(origin) {
     currentOrigin = origin;
+    saveAppState();
 }
 
 export function setCurrentDestination(destination) {
@@ -63,6 +62,7 @@ export function setCurrentDestination(destination) {
     if (destination && !destination.number) {
         destination.number = ''; // Garante que a propriedade exista
     }
+    saveAppState();
 }
 
 export function setCurrentSelectionMode(mode) {

@@ -33,6 +33,11 @@ function clearFieldsAndMap() {
     delete dom.destinationInput.dataset.lng;
     dom.destinationInput.closest('.input-group').classList.remove('input-filled');
 
+    // 3. Desativar o rastreamento de localização se estiver ativo
+    if (state.isTrackingLocation) {
+        stopLocationTracking();
+        dom.toggleLocationButton.classList.remove('active');
+    }
 
     // 4. Limpar a rota do mapa e da UI
     if (state.routeControl) {
@@ -48,6 +53,7 @@ function clearFieldsAndMap() {
         state.setEndCircle(null);
     }
     dom.submitButton.disabled = true;
+    dom.submitButton.classList.add('hidden');
     state.resetTripData();
     dom.estimatedDistanceTimeEl.textContent = '';
     dom.routeInfoDisplay.textContent = '';
@@ -73,6 +79,15 @@ function handleLocationToggle() {
         stopLocationTracking();
         dom.toggleLocationButton.classList.remove('active');
     } else {
+        dom.originInput.value = 'Buscando sua localização...';
+        startLocationTracking();
+        dom.toggleLocationButton.classList.add('active');
+    }
+}
+
+function handleCurrentLocation() {
+    toggleGpsModal(false);
+    if (!state.isTrackingLocation) {
         startLocationTracking();
         dom.toggleLocationButton.classList.add('active');
     }
@@ -81,10 +96,20 @@ function handleLocationToggle() {
 function setupAppEventListeners() {
     dom.toggleLocationButton.addEventListener('click', handleLocationToggle);
 
-    dom.activateGpsButton.addEventListener('click', () => {
-        toggleGpsModal(false);
-        handleCurrentLocation(); // Tenta novamente obter a localização
+    dom.recenterMapButton.addEventListener('click', () => {
+        if (state.routeControl) {
+            const bounds = state.routeControl.getBounds();
+            if (bounds) {
+                state.map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        } else if (state.currentUserCoords) {
+            state.map.setView(state.currentUserCoords, 15);
+        } else if (state.currentOrigin) {
+            state.map.setView(state.currentOrigin.latlng, 15);
+        }
     });
+
+    dom.activateGpsButton.addEventListener('click', handleCurrentLocation);
 
     dom.cancelGpsButton.addEventListener('click', () => {
         toggleGpsModal(false);
@@ -279,37 +304,54 @@ function checkAuthAndInitialize() {
 async function initializeMapAndLocation(isDark) {
     // 1. Check for saved state and restore if it exists
     if (state.currentOrigin) {
-        initializeMap(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng, isDark);
+        initializeMap(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng, 13, isDark);
         restoreUIFromState();
         return; // Exit after restoring state
     }
 
-    // 2. No saved state, find user location silently to center the map
-    const initializeWithDefault = () => {
-        initializeMap(state.defaultCoords[0], state.defaultCoords[1], isDark);
+    // 2. No saved state, find user location.
+    const initializeWithGeneric = () => {
+        initializeMap(0, 0, 2, isDark);
+        toggleGpsModal(true);
     };
 
-    if (isMobileDevice()) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                initializeMap(position.coords.latitude, position.coords.longitude, isDark);
-            },
-            () => {
-                // Silently fail to default coordinates
-                initializeWithDefault();
-            },
-            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-        );
+    if (navigator.geolocation) {
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+        };
+
+        const onSuccess = (position) => {
+            initializeMap(position.coords.latitude, position.coords.longitude, 13, isDark);
+        };
+
+        const onError = async () => {
+            // Fallback to IP location
+            try {
+                const ipLocation = await getLocationByIP();
+                if (ipLocation) {
+                    initializeMap(ipLocation.lat, ipLocation.lng, 13, isDark);
+                } else {
+                    initializeWithGeneric();
+                }
+            } catch (error) {
+                initializeWithGeneric();
+            }
+        };
+
+        navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
     } else {
+        // Geolocation not supported, go straight to fallback
         try {
             const ipLocation = await getLocationByIP();
             if (ipLocation) {
-                initializeMap(ipLocation.lat, ipLocation.lng, isDark);
+                initializeMap(ipLocation.lat, ipLocation.lng, 13, isDark);
             } else {
-                initializeWithDefault();
+                initializeWithGeneric();
             }
         } catch (error) {
-            initializeWithDefault();
+            initializeWithGeneric();
         }
     }
 }

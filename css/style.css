@@ -802,3 +802,49 @@ body.dark #toggle-location-button:hover {
     width: 1.25rem;
     height: 1.25rem;
 }
+
+#recenter-map-button {
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    top: 10px;
+    right: 10px;
+    padding: 0.5rem;
+}
+
+/* Animação de ondas para rastreamento de localização */
+.marker-container.tracking-active .pin-blue-svg {
+    position: relative;
+    z-index: 10;
+}
+
+.marker-container.tracking-active::before,
+.marker-container.tracking-active::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    background-color: #3b82f6;
+    border-radius: 50%;
+    opacity: 0;
+    animation: wave 2s infinite;
+    z-index: 1;
+}
+
+.marker-container.tracking-active::after {
+    animation-delay: 1s;
+}
+
+@keyframes wave {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0.5;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+    }
+}

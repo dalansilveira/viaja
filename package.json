@@ -3,13 +3,17 @@
   "version": "1.0.0",
   "description": "Aplicativo de transporte ViaJá",
   "scripts": {
-    "start": "live-server"
+    "start": "live-server",
+    "build:css": "node_modules/.bin/tailwindcss -i ./src/input.css -o ./css/style.css --watch"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "live-server": "^1.2.2"
+    "autoprefixer": "^10.4.21",
+    "live-server": "^1.2.2",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.12"
   },
   "dependencies": {
     "@capacitor/cli": "^7.4.2",

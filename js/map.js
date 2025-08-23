@@ -35,16 +35,17 @@ export function setMapTheme(isDark) {
 }
 
 /**
- * Inicializa o mapa com as coordenadas fornecidas.
+ * Inicializa o mapa com as coordenadas e o zoom fornecidos.
  * @param {number} lat - Latitude inicial.
  * @param {number} lng - Longitude inicial.
+ * @param {number} [zoom=13] - Nível de zoom inicial.
  * @param {boolean} isDark - Se o tema inicial deve ser escuro.
  */
-export function initializeMap(lat, lng, isDark) {
+export function initializeMap(lat, lng, zoom = 13, isDark) {
     if (state.map) {
         state.map.remove();
     }
-    const mapInstance = L.map('map').setView([lat, lng], 13);
+    const mapInstance = L.map('map').setView([lat, lng], zoom);
     state.setMap(mapInstance);
 
     setMapTheme(isDark);
@@ -68,7 +69,8 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
     let marker = type === 'origin' ? state.originMarker : state.destinationMarker;
 
     const pinClass = type === 'origin' ? 'pin-blue-svg' : 'pin-green-svg';
-    const markerHtml = `<div class="marker-container">
+    const trackingClass = (type === 'origin' && state.isTrackingLocation) ? 'tracking-active' : '';
+    const markerHtml = `<div class="marker-container ${trackingClass}">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-10 h-10 ${pinClass} pin-shadow">
                                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                             </svg>
@@ -147,6 +149,7 @@ export function traceRoute(fitBounds = false) {
         state.setRouteControl(null);
     }
     dom.routeInfoDisplay.classList.add('hidden');
+    dom.submitButton.classList.add('hidden');
 
     // Remove os círculos de início e fim existentes
     if (state.startCircle) {
@@ -189,7 +192,7 @@ export function traceRoute(fitBounds = false) {
         createMarker: function() { return null; },
         show: false,
         addWaypoints: false,
-        routeWhileDragging: true,
+        routeWhileDragging: false,
         collapsible: false,
         showAlternatives: false
     }).addTo(state.map);
@@ -237,6 +240,9 @@ export function traceRoute(fitBounds = false) {
         if (fitBounds) {
             state.map.fitBounds(route.coordinates, { padding: [50, 50] });
         }
+
+        // Exibe o botão de solicitar corrida
+        dom.submitButton.classList.remove('hidden');
     });
 
     state.setRouteControl(control);
@@ -291,7 +297,7 @@ export function startLocationTracking() {
         },
         {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 5000,
             maximumAge: 0
         }
     );
@@ -310,8 +316,15 @@ export function stopLocationTracking() {
         state.setIsTrackingLocation(false);
 
         // Torna o marcador de origem arrastável novamente
-        if (state.originMarker && state.originMarker.dragging) {
-            state.originMarker.dragging.enable();
+        if (state.originMarker) {
+            const iconElement = state.originMarker.getElement();
+            if (iconElement) {
+                const container = iconElement.querySelector('.marker-container');
+                if (container) container.classList.remove('tracking-active');
+            }
+            if (state.originMarker.dragging) {
+                state.originMarker.dragging.enable();
+            }
         }
     }
 }

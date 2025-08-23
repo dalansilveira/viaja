@@ -7,10 +7,10 @@
 
     <!-- PWA & SEO Meta Tags -->
     <title>Via Já</title>
-    <link rel="icon" href="imgs/logodark.png" type="image/png">
+    <link rel="icon" href="imgs/logodark.svg" type="image/svg+xml">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
-    <link rel="apple-touch-icon" href="imgs/logodark.png"> <!-- Use um ícone de 180x180 ou 192x192 -->
+    <link rel="apple-touch-icon" href="imgs/logodark.png"> <!-- Apple Touch Icon ainda prefere PNG. Mantendo este. -->
 
     <!-- Stylesheets -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,7 +40,7 @@
 <body>
     <!-- Splash Screen -->
     <div id="splash-screen" class="fixed inset-0 flex flex-col items-center justify-center z-[9999] transition-opacity duration-500">
-        <img src="imgs/logo.png" alt="Logo Via Já" class="w-48 h-48 mb-8 animate-pulse pointer-events-none select-none" id="splash-logo" style="-webkit-user-drag: none;">
+        <img src="imgs/logo.svg" alt="Logo Via Já" class="w-48 h-48 mb-8 animate-pulse pointer-events-none select-none" id="splash-logo" style="-webkit-user-drag: none;">
         <div class="loader"></div>
     </div>
 
@@ -48,7 +48,7 @@
     <div id="welcome-modal" class="fixed inset-0 z-50">
         <div id="welcome-modal-content" class="w-full h-full flex flex-col items-center justify-center p-4">
             <div class="text-center w-full max-w-[15rem]">
-                <img src="imgs/logo.png" alt="Logo Via Já" class="w-48 h-48 mx-auto mb-4" id="welcome-logo">
+                <img src="imgs/logo.svg" alt="Logo Via Já" class="w-48 h-48 mx-auto mb-4" id="welcome-logo">
                 <h2 class="text-xl font-bold mb-2 text-gray-800 dark:text-white">Bem-vindo ao Via Já!</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Acesse sua conta para continuar.</p>
             </div>
@@ -101,7 +101,7 @@
     <div id="message-box" class="message-box"></div>
     
     <div id="install-banner" class="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4 shadow-lg hidden items-center justify-center gap-4" style="z-index: 2000;">
-        <img src="imgs/logo.png" alt="Logo Via Já" class="w-8 h-8">
+        <img src="imgs/logo.svg" alt="Logo Via Já" class="w-8 h-8">
         <span class="font-semibold">Instale o app para uma melhor experiência!</span>
         <button id="install-button" class="bg-white text-blue-600 font-bold py-2 px-4 rounded-lg shadow-md hover:bg-gray-200 transition">
             Instalar
@@ -190,7 +190,7 @@
     <div class="pwa-container">
         <header class="header flex-shrink-0 mb-4">
             <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-2 header-title select-none">
-                <img src="imgs/logo.png" alt="Logo Via Já" class="w-10 h-10">
+                <img src="imgs/logo.svg" alt="Logo Via Já" class="w-10 h-10">
                 Via Já
             </h1>
             <div class="flex items-center gap-4">
@@ -233,10 +233,19 @@
             <div id="map" class="h-full w-full rounded-xl"></div>
             <div id="map-message" class="map-message">Toque no mapa para selecionar o local</div>
             <div id="route-info-display" class="text-center font-semibold text-gray-700 dark:text-gray-300 my-2 hidden"></div>
+            <button id="recenter-map-button" class="leaflet-control leaflet-bar absolute bg-white dark:bg-gray-800 p-2 rounded-md shadow-md cursor-pointer" title="Recentralizar Mapa">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.146 4.854l-1.489 1.489A8 8 0 1 0 12 20a8.094 8.094 0 0 0 7.371-4.886 1 1 0 1 0-1.842-.779A6.071 6.071 0 0 1 12 18a6 6 0 1 1 4.243-10.243l-1.39 1.39a.5.5 0 0 0 .354.854H19.5A.5.5 0 0 0 20 9.5V5.207a.5.5 0 0 0-.854-.353z"/>
+                </svg>
+            </button>
             <button id="toggle-location-button" class="leaflet-control leaflet-bar absolute bottom-5 right-5 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md cursor-pointer" title="Rastreamento de Localização">
                 <svg id="location-toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <circle cx="12" cy="12" r="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="6.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 5.25V3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.75 12H21" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 18.75V21" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5.25 12H3" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </button>
         </div>
@@ -286,7 +295,7 @@
                         <div id="destination-favorites-list" class="tab-content"></div>
                     </div>
                     <button type="button" id="clear-button" class="button-clear">Limpar</button>
-                    <button type="button" id="submit-button" class="button-submit" disabled>
+                    <button type="button" id="submit-button" class="button-submit hidden" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 mr-2">
                             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                         </svg>

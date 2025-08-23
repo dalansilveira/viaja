@@ -11,16 +11,19 @@ export async function fetchAddressSuggestions(query) {
         return [];
     }
 
-    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&limit=5&addressdetails=1`;
+    const baseUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&limit=5&addressdetails=1`;
+    let nominatimUrl = baseUrl;
 
     if (currentUserCoords) {
         const offset = 0.125;
         const viewbox = `${currentUserCoords.lng - offset},${currentUserCoords.lat + offset},${currentUserCoords.lng + offset},${currentUserCoords.lat - offset}`;
-        url += `&viewbox=${viewbox}&bounded=1`;
+        nominatimUrl += `&viewbox=${viewbox}&bounded=1`;
     }
 
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(nominatimUrl)}`;
+
     try {
-        const response = await fetch(url);
+        const response = await fetch(proxyUrl);
         const results = await response.json();
         return results.map(place => {
             const displayAddress = formatPlaceForDisplay(place) || place.display_name.split(',').slice(0, 3).join(',');
@@ -39,9 +42,10 @@ export async function fetchAddressSuggestions(query) {
  * @returns {Promise<object>} O objeto de dados completo da API de geocodificação.
  */
 export async function reverseGeocode(lat, lng) {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+    const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(nominatimUrl)}`;
     try {
-        const response = await fetch(url);
+        const response = await fetch(proxyUrl);
         const data = await response.json();
         return data;
     } catch (error) {
@@ -56,12 +60,12 @@ export async function reverseGeocode(lat, lng) {
  */
 export async function getLocationByIP() {
     try {
-        const response = await fetch('https://get.geojs.io/v1/ip/geo.json');
+        const response = await fetch('http://ip-api.com/json');
         const data = await response.json();
-        if (data && data.latitude && data.longitude) {
+        if (data && data.status === 'success' && data.lat && data.lon) {
             return {
-                lat: parseFloat(data.latitude),
-                lng: parseFloat(data.longitude)
+                lat: data.lat,
+                lng: data.lon
             };
         }
         return null;

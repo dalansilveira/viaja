@@ -1,14 +1,37 @@
-const CACHE_NAME = 'viaja-app-cache-v1';
-// Para garantir que funcione no GitHub Pages, os caminhos locais devem ser absolutos
-// a partir da raiz do domínio, incluindo o nome do repositório.
+const CACHE_NAME = 'viaja-app-cache-v3';
+// Lista completa de arquivos essenciais para o App Shell.
 const urlsToCache = [
+  // Core
   '/viaja/',
-  '/viaja/imgs/logo.png',
-  '/viaja/imgs/logodark.png',
+  '/viaja/index.html',
+  '/viaja/manifest.json',
+  '/viaja/css/style.css',
+
+  // Images (agora em SVG)
+  '/viaja/imgs/logo.svg',
+  '/viaja/imgs/logodark.svg',
+  '/viaja/imgs/logodark.png', // Mantendo para o Apple Touch Icon
+
+  // JavaScript Modules
+  '/viaja/js/app.js',
+  '/viaja/js/dom.js',
+  '/viaja/js/state.js',
+  '/viaja/js/utils.js',
+  '/viaja/js/api.js',
+  '/viaja/js/map.js',
+  '/viaja/js/ui.js',
+  '/viaja/js/history.js',
+  '/viaja/js/auth.js',
+  '/viaja/js/pwa.js',
+  '/viaja/js/destinations.js',
+
+  // External Libraries
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css',
-  'https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js'
+  'https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js',
+  'https://cdn.tailwindcss.com',
+  'https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap'
 ];
 
 self.addEventListener('install', event => {
