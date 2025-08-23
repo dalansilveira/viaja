@@ -171,8 +171,8 @@ export async function handleMapClick(e) {
  * @param {HTMLDivElement} suggestionsEl - O container para as sugestões.
  */
 export async function displayAddressSuggestions(inputEl, suggestionsEl) {
-    const query = inputEl.value.toLowerCase();
     suggestionsEl.innerHTML = '';
+    const query = inputEl.value.toLowerCase();
     suggestionsEl.style.display = 'none';
 
     if (query.length < 2) return;

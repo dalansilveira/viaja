@@ -76,6 +76,17 @@ function handleCurrentLocation() {
     }
 }
 
+function requestRide() {
+    if (state.currentOrigin && state.currentDestination) {
+        // Salva o destino primário no histórico ao solicitar a corrida
+        if (state.currentDestination.data) {
+            saveDestinationToHistory(state.currentDestination.data);
+        }
+        dom.vehicleSelectionModal.classList.remove('hidden');
+        state.setCurrentSelectionMode(null);
+    }
+}
+
 function setupAppEventListeners() {
     dom.toggleLocationButton.addEventListener('click', handleLocationToggle);
 
@@ -88,26 +99,12 @@ function setupAppEventListeners() {
         // Opcional: pode adicionar alguma lógica aqui se o usuário cancelar
     });
 
-    dom.submitButton.addEventListener('click', () => {
-        if (state.currentOrigin && state.currentDestination) {
-            // Salva o destino primário no histórico ao solicitar a corrida
-            if (state.currentDestination.data) {
-                saveDestinationToHistory(state.currentDestination.data);
-            }
-            dom.vehicleSelectionModal.classList.remove('hidden');
-            state.setCurrentSelectionMode(null);
-        }
-    });
+    dom.submitButton.addEventListener('click', requestRide);
+    dom.goButton.addEventListener('click', requestRide);
+
 
     dom.closeVehicleSelectionModalButton.addEventListener('click', () => {
         dom.vehicleSelectionModal.classList.add('hidden');
-    });
-
-    dom.selectDestinationButton.addEventListener('click', () => {
-        const newMode = state.currentSelectionMode === 'destination' ? null : 'destination';
-        state.setCurrentSelectionMode(newMode);
-        setSelectionButtonState(newMode);
-        refreshMap();
     });
 
     dom.vehicleButtons.forEach(button => {

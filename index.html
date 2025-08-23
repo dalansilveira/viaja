@@ -213,13 +213,9 @@
     </div>
 
     <!-- Controles Superiores -->
-    <div id="destination-container">
-        <div class="relative">
-            <button id="auth-menu-button" class="p-2 rounded-lg transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-            </button>
+    <div id="destination-container" class="flex items-start gap-2">
+        <div class="relative pt-2">
+            
             <div id="auth-menu" class="absolute left-0 mt-2 w-48 rounded-md shadow-lg py-1 z-20 hidden">
                 <a href="#" id="auth-menu-profile" class="block px-4 py-2 text-sm rounded-md">Perfil</a>
                 <a href="#" id="auth-menu-preferences" class="block px-4 py-2 text-sm rounded-md">Preferências</a>
@@ -253,14 +249,24 @@
                 <a href="#" id="auth-menu-help" class="block px-4 py-2 text-sm rounded-md">Ajuda e Suporte</a>
             </div>
         </div>
-        <div class="destination-item">
+        <div class="relative flex-grow">
             <div class="input-group input-group-destination">
-                <input type="text" id="destination-input" placeholder="Para onde?" autocomplete="off" class="destination-input address-input flex-grow">
-                <button type="button" id="select-destination-button" class="select-in-field-button" title="Selecionar no mapa">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+
+                <button id="auth-menu-button" class="p-2 rounded-lg transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
+
+                
+                <input type="text" id="destination-input" placeholder="Para onde?" autocomplete="off" class="destination-input address-input flex-grow">
+                <div class="flex">
+                    <button type="button" id="go-button" class="select-in-field-button hidden" title="Iniciar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
             </div>
             <div id="destination-suggestions" class="autocomplete-suggestions"></div>
         </div>
