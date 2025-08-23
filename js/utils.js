@@ -104,6 +104,31 @@ export function isMobileDevice() {
 }
 
 /**
+ * Calcula a caixa delimitadora (bounding box) para uma determinada coordenada e raio.
+ * @param {number} lat - Latitude do centro.
+ * @param {number} lng - Longitude do centro.
+ * @param {number} radiusKm - Raio em quilômetros.
+ * @returns {object} Um objeto com { minLat, minLng, maxLat, maxLng }.
+ */
+export function calculateBoundingBox(lat, lng, radiusKm) {
+    const latRad = lat * (Math.PI / 180);
+    
+    // Raio da Terra em km
+    const earthRadius = 6371;
+    
+    // Mudança em latitude e longitude
+    const latDelta = radiusKm / earthRadius * (180 / Math.PI);
+    const lngDelta = radiusKm / (earthRadius * Math.cos(latRad)) * (180 / Math.PI);
+    
+    return {
+        minLat: lat - latDelta,
+        minLng: lng - lngDelta,
+        maxLat: lat + latDelta,
+        maxLng: lng + lngDelta
+    };
+}
+
+/**
  * Formata um número de telefone no padrão (xx) xxxxx-xxxx.
  * @param {string} phone - O número de telefone a ser formatado.
  * @returns {string} O número de telefone formatado.
@@ -114,7 +139,30 @@ export function formatPhoneNumber(phone) {
         return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
     }
     if (cleaned.length === 10) {
-        return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
     }
     return phone;
+}
+
+/**
+ * Calcula a distância haversina entre duas coordenadas.
+ * @param {{lat: number, lng: number}} coords1 - Coordenadas do primeiro ponto.
+ * @param {{lat: number, lon: number}} coords2 - Coordenadas do segundo ponto (lon, não lng).
+ * @returns {number} A distância em quilômetros.
+ */
+export function haversineDistance(coords1, coords2) {
+    const toRad = (x) => (x * Math.PI) / 180;
+    const R = 6371; // Raio da Terra em km
+
+    const dLat = toRad(coords2.lat - coords1.lat);
+    const dLon = toRad(coords2.lon - coords1.lng); // Note a diferença: lon vs lng
+    const lat1 = toRad(coords1.lat);
+    const lat2 = toRad(coords2.lat);
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    
+    return R * c;
 }

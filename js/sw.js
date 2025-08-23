@@ -1,30 +1,24 @@
-const CACHE_NAME = 'viaja-app-cache-v3';
+const CACHE_NAME = 'viaja-app-cache-v5';
 // Lista completa de arquivos essenciais para o App Shell.
 const urlsToCache = [
   // Core
-  '/viaja/',
-  '/viaja/index.html',
-  '/viaja/manifest.json',
-  '/viaja/css/style.css',
-
-  // Images
-  '/viaja/imgs/logo.webp',
-  '/viaja/imgs/logo.png',
-  '/viaja/imgs/logodark.webp',
-  '/viaja/imgs/logodark.png', // Mantendo para o Apple Touch Icon
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/css/style.css',
 
   // JavaScript Modules
-  '/viaja/js/app.js',
-  '/viaja/js/dom.js',
-  '/viaja/js/state.js',
-  '/viaja/js/utils.js',
-  '/viaja/js/api.js',
-  '/viaja/js/map.js',
-  '/viaja/js/ui.js',
-  '/viaja/js/history.js',
-  '/viaja/js/auth.js',
-  '/viaja/js/pwa.js',
-  '/viaja/js/destinations.js',
+  '/js/app.js',
+  '/js/dom.js',
+  '/js/state.js',
+  '/js/utils.js',
+  '/js/api.js',
+  '/js/map.js',
+  '/js/ui.js',
+  '/js/history.js',
+  '/js/auth.js',
+  '/js/pwa.js',
+  '/js/destinations.js',
 
   // External Libraries
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

@@ -4,42 +4,26 @@ import { saveAppState, loadAppState } from './state.js';
 import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice } from './utils.js';
 import { getLocationByIP, reverseGeocode } from './api.js';
 import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, startLocationTracking, stopLocationTracking } from './map.js';
-import { displayAddressSuggestions, toggleMapVisibility, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState } from './ui.js';
-import { renderHistoryList, saveDestinationToHistory } from './history.js';
+import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState } from './ui.js';
+import { saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
 import { setupPWA } from './pwa.js';
+import { auth } from './firebase-config.js';
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 function clearFieldsAndMap() {
-    // 1. Limpar estado e marcador de origem
-    state.setCurrentOrigin(null);
-    if (state.originMarker) {
-        state.map.removeLayer(state.originMarker);
-        state.setOriginMarker(null);
-    }
-    dom.originInput.value = '';
-    delete dom.originInput.dataset.lat;
-    delete dom.originInput.dataset.lng;
-    dom.originInput.parentElement.classList.remove('input-filled');
-
-    // 2. Limpar estado e marcador de destino
+    // 1. Limpar estado e marcador de destino
     state.setCurrentDestination(null);
     if (state.destinationMarker) {
         state.map.removeLayer(state.destinationMarker);
         state.setDestinationMarker(null);
     }
     dom.destinationInput.value = '';
-    dom.destinationNumberInput.value = '';
     delete dom.destinationInput.dataset.lat;
     delete dom.destinationInput.dataset.lng;
     dom.destinationInput.closest('.input-group').classList.remove('input-filled');
 
-    // 3. Desativar o rastreamento de localização se estiver ativo
-    if (state.isTrackingLocation) {
-        stopLocationTracking();
-        dom.toggleLocationButton.classList.remove('active');
-    }
-
-    // 4. Limpar a rota do mapa e da UI
+    // 2. Limpar a rota do mapa e da UI
     if (state.routeControl) {
         state.map.removeControl(state.routeControl);
         state.setRouteControl(null);
@@ -63,7 +47,7 @@ function clearFieldsAndMap() {
         button.querySelector('.vehicle-price').textContent = '';
     });
     
-    toggleMapVisibility(false);
+    refreshMap();
 }
 
 
@@ -79,7 +63,6 @@ function handleLocationToggle() {
         stopLocationTracking();
         dom.toggleLocationButton.classList.remove('active');
     } else {
-        dom.originInput.value = 'Buscando sua localização...';
         startLocationTracking();
         dom.toggleLocationButton.classList.add('active');
     }
@@ -96,18 +79,7 @@ function handleCurrentLocation() {
 function setupAppEventListeners() {
     dom.toggleLocationButton.addEventListener('click', handleLocationToggle);
 
-    dom.recenterMapButton.addEventListener('click', () => {
-        if (state.routeControl) {
-            const bounds = state.routeControl.getBounds();
-            if (bounds) {
-                state.map.fitBounds(bounds, { padding: [50, 50] });
-            }
-        } else if (state.currentUserCoords) {
-            state.map.setView(state.currentUserCoords, 15);
-        } else if (state.currentOrigin) {
-            state.map.setView(state.currentOrigin.latlng, 15);
-        }
-    });
+    dom.recenterMapButton.addEventListener('click', clearFieldsAndMap);
 
     dom.activateGpsButton.addEventListener('click', handleCurrentLocation);
 
@@ -122,31 +94,20 @@ function setupAppEventListeners() {
             if (state.currentDestination.data) {
                 saveDestinationToHistory(state.currentDestination.data);
             }
-            switchPanel('vehicle-selection-panel');
+            dom.vehicleSelectionModal.classList.remove('hidden');
             state.setCurrentSelectionMode(null);
         }
     });
 
-    dom.clearButton.addEventListener('click', clearFieldsAndMap);
-
-    dom.selectOriginButton.addEventListener('click', () => {
-        // Se o rastreamento estiver ativo, desative-o primeiro.
-        if (state.isTrackingLocation) {
-            stopLocationTracking();
-            dom.toggleLocationButton.classList.remove('active');
-        }
-
-        const newMode = state.currentSelectionMode === 'origin' ? null : 'origin';
-        state.setCurrentSelectionMode(newMode);
-        setSelectionButtonState(newMode);
-        toggleMapVisibility(newMode !== null);
+    dom.closeVehicleSelectionModalButton.addEventListener('click', () => {
+        dom.vehicleSelectionModal.classList.add('hidden');
     });
 
     dom.selectDestinationButton.addEventListener('click', () => {
         const newMode = state.currentSelectionMode === 'destination' ? null : 'destination';
         state.setCurrentSelectionMode(newMode);
         setSelectionButtonState(newMode);
-        toggleMapVisibility(newMode !== null);
+        refreshMap();
     });
 
     dom.vehicleButtons.forEach(button => {
@@ -170,31 +131,31 @@ function setupAppEventListeners() {
                 dom.statusDestinationText.textContent = state.currentDestination.data.display_name;
             }
             
+            dom.vehicleSelectionModal.classList.add('hidden');
             switchPanel('ride-status-panel');
         });
     });
 
-    dom.backToFormButton.addEventListener('click', () => switchPanel('ride-request-panel'));
     dom.cancelButton.addEventListener('click', () => {
         switchPanel('ride-request-panel');
         clearFieldsAndMap();
     });
 
-    dom.originInput.addEventListener('input', debounce((e) => displayAddressSuggestions(e.target, dom.originSuggestions), 300));
-    dom.destinationInput.addEventListener('input', debounce((e) => displayAddressSuggestions(e.target, dom.destinationSuggestions), 300));
-    dom.destinationNumberInput.addEventListener('input', () => {
-        if (state.currentDestination) {
-            state.currentDestination.number = dom.destinationNumberInput.value;
-            saveAppState();
+    dom.destinationInput.addEventListener('input', debounce((e) => {
+        displayAddressSuggestions(e.target, dom.destinationSuggestions);
+        if (e.target.value === '') {
+            state.setCurrentDestination(null);
+            if (state.destinationMarker) {
+                state.map.removeLayer(state.destinationMarker);
+                state.setDestinationMarker(null);
+            }
+            traceRoute(); // Limpa a rota e os círculos
+            dom.destinationInput.closest('.input-group').classList.remove('input-filled');
         }
-    });
+    }, 300));
 
     document.addEventListener('click', (e) => {
-        // Se o clique não foi dentro de um input de origem ou de seu container de sugestões
-        if (!dom.originInput.contains(e.target) && !dom.originSuggestions.contains(e.target)) {
-            dom.originSuggestions.style.display = 'none';
-        }
-
+        // Se o clique não foi dentro de um input de destino ou de seu container de sugestões
         if (!dom.destinationInput.contains(e.target) && !dom.destinationSuggestions.contains(e.target)) {
             dom.destinationSuggestions.style.display = 'none';
         }
@@ -204,7 +165,6 @@ function setupAppEventListeners() {
         toggleTheme();
         setMapTheme(document.body.classList.contains('dark'));
     });
-    dom.toggleMapButton.addEventListener('click', () => toggleMapVisibility(null, true));
 
     const shareButton = document.getElementById('share-button');
     if (shareButton) {
@@ -241,19 +201,16 @@ function setupAppEventListeners() {
 }
 
 function restoreUIFromState() {
-    toggleMapVisibility(state.isMapVisible);
+    refreshMap();
 
     if (!state.currentOrigin && !state.currentDestination) return;
 
     if (state.currentOrigin) {
-        dom.originInput.value = state.currentOrigin.data.display_name;
         addOrMoveMarker(state.currentOrigin.latlng, 'origin', 'Origem');
-        dom.originInput.parentElement.classList.add('input-filled');
     }
 
     if (state.currentDestination) {
         dom.destinationInput.value = state.currentDestination.data.display_name;
-        dom.destinationNumberInput.value = state.currentDestination.number || '';
         addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino');
         dom.destinationInput.closest('.input-group').classList.add('input-filled');
     }
@@ -289,69 +246,72 @@ function applyTheme() {
 }
 
 function checkAuthAndInitialize() {
-    // Simulação: verificar se o usuário está logado (ex: checando um token no localStorage)
-    const isLoggedIn = localStorage.getItem('user_token');
-
-    if (isLoggedIn) {
-        dom.welcomeModal.style.display = 'none';
-        initializeApp();
-    } else {
-        dom.welcomeModal.style.display = 'flex';
-        dom.loginPhoneInput.focus(); // Foco no campo de telefone
-    }
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Usuário está logado
+            console.log("Usuário logado:", user.uid);
+            localStorage.setItem('user_uid', user.uid);
+            if (user.phoneNumber) {
+                localStorage.setItem('user_phone', user.phoneNumber.replace('+55', ''));
+            }
+            dom.welcomeModal.style.display = 'none';
+            initializeApp();
+        } else {
+            // Usuário está deslogado
+            console.log("Nenhum usuário logado.");
+            localStorage.removeItem('user_uid');
+            localStorage.removeItem('user_phone');
+            dom.welcomeModal.style.display = 'flex';
+            dom.loginPhoneInput.focus();
+        }
+    });
 }
 
 async function initializeMapAndLocation(isDark) {
-    // 1. Check for saved state and restore if it exists
+    let initialCoords = null;
+    let initialZoom = 2;
+
+    // 1. Tenta obter as coordenadas do estado salvo
     if (state.currentOrigin) {
-        initializeMap(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng, 13, isDark);
-        restoreUIFromState();
-        return; // Exit after restoring state
+        initialCoords = state.currentOrigin.latlng;
+        initialZoom = 13;
     }
 
-    // 2. No saved state, find user location.
-    const initializeWithGeneric = () => {
-        initializeMap(0, 0, 2, isDark);
-        toggleGpsModal(true);
-    };
-
-    if (navigator.geolocation) {
-        const options = {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0
-        };
-
-        const onSuccess = (position) => {
-            initializeMap(position.coords.latitude, position.coords.longitude, 13, isDark);
-        };
-
-        const onError = async () => {
-            // Fallback to IP location
-            try {
-                const ipLocation = await getLocationByIP();
-                if (ipLocation) {
-                    initializeMap(ipLocation.lat, ipLocation.lng, 13, isDark);
-                } else {
-                    initializeWithGeneric();
-                }
-            } catch (error) {
-                initializeWithGeneric();
-            }
-        };
-
-        navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
-    } else {
-        // Geolocation not supported, go straight to fallback
+    // 2. Se não houver estado salvo, tenta obter a localização por IP como um fallback rápido
+    if (!initialCoords) {
         try {
             const ipLocation = await getLocationByIP();
             if (ipLocation) {
-                initializeMap(ipLocation.lat, ipLocation.lng, 13, isDark);
-            } else {
-                initializeWithGeneric();
+                initialCoords = { lat: ipLocation.lat, lng: ipLocation.lng };
+                initialZoom = 13;
             }
         } catch (error) {
-            initializeWithGeneric();
+            console.error("Não foi possível obter a localização por IP na inicialização", error);
+        }
+    }
+    
+    // 3. Se ainda não houver coordenadas, usa um padrão genérico
+    if (!initialCoords) {
+        initialCoords = { lat: 0, lng: 0 };
+    }
+
+    // 4. Inicializa o mapa com as melhores coordenadas encontradas
+    initializeMap(initialCoords.lat, initialCoords.lng, initialZoom, isDark);
+
+    // 5. Se havia um estado salvo, restaura a UI completa
+    if (state.currentOrigin) {
+        restoreUIFromState();
+    }
+
+    // 6. SEMPRE tenta iniciar o rastreamento de localização por padrão, se disponível
+    if (navigator.geolocation) {
+        startLocationTracking();
+        dom.toggleLocationButton.classList.add('active');
+        // Se ainda não tivermos uma origem definida, o rastreamento cuidará disso
+    } else {
+        // Se não houver geolocalização e não foi possível encontrar a localização por outros meios, mostra o modal
+        if (initialZoom === 2) { // Isso significa que estamos na localização genérica 0,0
+            toggleGpsModal(true);
         }
     }
 }
@@ -359,10 +319,11 @@ async function initializeMapAndLocation(isDark) {
 async function initializeApp() {
     const isDark = document.body.classList.contains('dark');
     setupAppEventListeners();
-    renderHistoryList();
     setupPWA();
 
-    loadAppState(); // Carrega o estado salvo
+    // Limpa o estado salvo anteriormente para garantir que não seja restaurado
+    localStorage.removeItem('viaja_appState');
+    loadAppState(); // Agora não fará nada, mas mantemos a chamada por segurança
 
     await initializeMapAndLocation(isDark);
 
@@ -370,32 +331,31 @@ async function initializeApp() {
     dom.destinationInput.focus();
 }
 
-window.onload = () => {
-    // Aplica o tema imediatamente para garantir que a splash screen tenha a aparência correta
+// A função window.onload foi movida para o final do arquivo para garantir que todas as funções estejam definidas.
+// No entanto, a lógica de autenticação precisa ser ajustada.
+// A chamada para setupRecaptcha() será feita a partir daqui.
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Aplica o tema imediatamente
     applyTheme();
 
     const splashScreen = document.getElementById('splash-screen');
-    
-    // Garante que a splash screen esteja visível no início
     splashScreen.style.opacity = '1';
 
-    // Simula o carregamento de preferências e outros dados
-    setTimeout(() => {
-        // Inicia a transição de desaparecimento
-        splashScreen.style.opacity = '0';
-        
-        // Remove a splash screen do DOM após a transição para não interferir com cliques
-        splashScreen.addEventListener('transitionend', () => {
-            splashScreen.remove();
-        });
+    // Configura os listeners de autenticação que dependem do DOM
+    setupAuthEventListeners();
+    setupInitialEventListeners();
+    setupOnlineStatusChecker();
 
-        // Continua com a inicialização do app
-        setupAuthEventListeners();
-        setupInitialEventListeners();
-        checkAuthAndInitialize();
-        setupOnlineStatusChecker();
-    }, 2000); // Mantém a splash por 2 segundos
-};
+    // A verificação de autenticação agora decide o que fazer a seguir
+    checkAuthAndInitialize();
+
+    // Esconde a splash screen após uma pequena espera
+    setTimeout(() => {
+        splashScreen.style.opacity = '0';
+        splashScreen.addEventListener('transitionend', () => splashScreen.remove());
+    }, 1500);
+});
 
 function setupOnlineStatusChecker() {
     const offlineDialog = document.getElementById('offline-dialog');
@@ -417,3 +377,11 @@ function setupOnlineStatusChecker() {
     // Verificação periódica para garantir
     setInterval(updateOnlineStatus, 10000); // Verifica a cada 10 segundos
 }
+
+window.addEventListener('storage', (event) => {
+    if (event.key === 'viaja_appState') {
+        console.log('Estado da aplicação atualizado em outra aba. Recarregando...');
+        loadAppState();
+        restoreUIFromState();
+    }
+});

@@ -45,7 +45,7 @@ export function initializeMap(lat, lng, zoom = 13, isDark) {
     if (state.map) {
         state.map.remove();
     }
-    const mapInstance = L.map('map').setView([lat, lng], zoom);
+    const mapInstance = L.map('map', { zoomControl: false }).setView([lat, lng], zoom);
     state.setMap(mapInstance);
 
     setMapTheme(isDark);
@@ -102,32 +102,39 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
         marker.on('dragend', async (e) => {
             state.setIsDraggingMarker(false);
             const newLatLng = e.target.getLatLng();
-            const inputEl = type === 'origin' ? dom.originInput : dom.destinationInput;
 
-            if (inputEl) {
-                inputEl.value = 'Buscando endereço...';
+            if (type === 'destination') {
+                const inputEl = dom.destinationInput;
+                if (inputEl) {
+                    try {
+                        const fullAddressData = await reverseGeocode(newLatLng.lat, newLatLng.lng);
+                        const addressText = formatPlaceForDisplay(fullAddressData) || 'Endereço desconhecido';
+                        
+                        inputEl.value = addressText;
+                        inputEl.dataset.lat = newLatLng.lat;
+                        inputEl.dataset.lng = newLatLng.lng;
+                        fullAddressData.display_name = addressText;
+
+                        state.setCurrentDestination({ latlng: newLatLng, data: fullAddressData });
+                    } catch (error) {
+                        console.error("Erro ao buscar endereço:", error);
+                        inputEl.value = 'Erro ao buscar endereço';
+                    } finally {
+                        traceRoute();
+                    }
+                }
+            } else if (type === 'origin') {
                 try {
                     const fullAddressData = await reverseGeocode(newLatLng.lat, newLatLng.lng);
-                    const addressText = formatPlaceForDisplay(fullAddressData) || 'Endereço desconhecido';
-                    
-                    inputEl.value = addressText;
-                    inputEl.dataset.lat = newLatLng.lat;
-                    inputEl.dataset.lng = newLatLng.lng;
-                    fullAddressData.display_name = addressText;
-
-                    if (type === 'origin') {
-                        state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
-                    } else {
-                        state.setCurrentDestination({ latlng: newLatLng, data: fullAddressData });
-                    }
+                    state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
                 } catch (error) {
-                    console.error("Erro ao buscar endereço:", error);
-                    inputEl.value = 'Erro ao buscar endereço';
+                    console.error("Erro ao buscar endereço de origem:", error);
                 } finally {
-                    traceRoute();
+                    // Apenas traça a rota se já houver um destino
+                    if (state.currentDestination) {
+                        traceRoute();
+                    }
                 }
-            } else {
-                traceRoute();
             }
         });
 
@@ -268,13 +275,8 @@ export function startLocationTracking() {
         const addressText = formatPlaceForDisplay(fullAddressData) || 'Localização atual';
         fullAddressData.display_name = addressText;
         state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
-        dom.originInput.value = addressText;
 
         state.map.panTo(newLatLng);
-
-        if (state.currentDestination) {
-            traceRoute();
-        }
     };
 
     const watchId = navigator.geolocation.watchPosition(
@@ -313,18 +315,19 @@ export function stopLocationTracking() {
     if (state.locationWatchId !== null) {
         navigator.geolocation.clearWatch(state.locationWatchId);
         state.setLocationWatchId(null);
-        state.setIsTrackingLocation(false);
+    }
+    state.setIsTrackingLocation(false);
+    state.setCurrentUserCoords(null); // Limpa a última localização conhecida
 
-        // Torna o marcador de origem arrastável novamente
-        if (state.originMarker) {
-            const iconElement = state.originMarker.getElement();
-            if (iconElement) {
-                const container = iconElement.querySelector('.marker-container');
-                if (container) container.classList.remove('tracking-active');
-            }
-            if (state.originMarker.dragging) {
-                state.originMarker.dragging.enable();
-            }
+    // Torna o marcador de origem arrastável novamente
+    if (state.originMarker) {
+        const iconElement = state.originMarker.getElement();
+        if (iconElement) {
+            const container = iconElement.querySelector('.marker-container');
+            if (container) container.classList.remove('tracking-active');
+        }
+        if (state.originMarker.dragging) {
+            state.originMarker.dragging.enable();
         }
     }
 }

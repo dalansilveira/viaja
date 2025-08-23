@@ -1,34 +1,49 @@
-import { formatPlaceForDisplay } from './utils.js';
-import { currentUserCoords } from './state.js';
+// ATENÇÃO: Em um ambiente de produção, esta chave deveria ser protegida
+// e não estar diretamente no código do frontend.
+import { calculateBoundingBox } from './utils.js';
+import { updateDebugConsole } from './ui.js';
+
+const OPENCAGE_API_KEY = '49810e6bb57044b990140e0accfa637e';
 
 /**
- * Busca sugestões de endereço com base em uma consulta.
+ * Busca sugestões de endereço com base em uma consulta usando OpenCageData.
  * @param {string} query - O termo de busca.
+ * @param {object} [proximityCoords] - As coordenadas {lat, lng} para priorizar os resultados.
  * @returns {Promise<Array>} Uma lista de locais correspondentes.
  */
-export async function fetchAddressSuggestions(query) {
-    if (query.length < 3) {
+export async function fetchAddressSuggestions(query, proximityCoords = null) {
+    if (query.length < 2) {
         return [];
     }
 
-    const baseUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&limit=5&addressdetails=1`;
-    let nominatimUrl = baseUrl;
+    let url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(query)}&key=${OPENCAGE_API_KEY}&countrycode=br&limit=7&language=pt`;
 
-    if (currentUserCoords) {
-        const offset = 0.125;
-        const viewbox = `${currentUserCoords.lng - offset},${currentUserCoords.lat + offset},${currentUserCoords.lng + offset},${currentUserCoords.lat - offset}`;
-        nominatimUrl += `&viewbox=${viewbox}&bounded=1`;
+    if (proximityCoords) {
+        const bounds = calculateBoundingBox(proximityCoords.lat, proximityCoords.lng, 50); // Raio de 50 km
+        url += `&bounds=${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}`;
     }
 
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(nominatimUrl)}`;
-
     try {
-        const response = await fetch(proxyUrl);
-        const results = await response.json();
-        return results.map(place => {
-            const displayAddress = formatPlaceForDisplay(place) || place.display_name.split(',').slice(0, 3).join(',');
-            return { ...place, display_name: displayAddress };
-        });
+        const response = await fetch(url);
+        const data = await response.json();
+        updateDebugConsole(data); // Atualiza o console de depuração
+
+        if (data.results && Array.isArray(data.results)) {
+            // Mapeia a resposta do OpenCage para o formato que o app espera
+            return data.results.map(place => ({
+                lat: place.geometry.lat,
+                lon: place.geometry.lng,
+                display_name: place.formatted,
+                address: {
+                    road: place.components.road,
+                    suburb: place.components.suburb,
+                    city: place.components.city || place.components.town,
+                    state: place.components.state,
+                    postcode: place.components.postcode
+                }
+            }));
+        }
+        return [];
     } catch (error) {
         console.error('Erro ao buscar sugestões de endereço:', error);
         return [];
@@ -36,18 +51,35 @@ export async function fetchAddressSuggestions(query) {
 }
 
 /**
- * Obtém o endereço de uma coordenada usando geocodificação reversa.
+ * Obtém o endereço de uma coordenada usando OpenCageData.
  * @param {number} lat - Latitude.
  * @param {number} lng - Longitude.
- * @returns {Promise<object>} O objeto de dados completo da API de geocodificação.
+ * @returns {Promise<object>} O objeto de dados completo do primeiro resultado.
  */
 export async function reverseGeocode(lat, lng) {
-    const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(nominatimUrl)}`;
+    const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${OPENCAGE_API_KEY}&language=pt&limit=1`;
+
     try {
-        const response = await fetch(proxyUrl);
+        const response = await fetch(url);
         const data = await response.json();
-        return data;
+
+        if (data.results && data.results.length > 0) {
+            const place = data.results[0];
+            // Retorna um objeto no formato similar ao que o app esperava do Nominatim
+            return {
+                lat: place.geometry.lat,
+                lon: place.geometry.lng,
+                display_name: place.formatted,
+                address: {
+                    road: place.components.road,
+                    suburb: place.components.suburb,
+                    city: place.components.city || place.components.town,
+                    state: place.components.state,
+                    postcode: place.components.postcode
+                }
+            };
+        }
+        return { error: 'Endereço desconhecido', address: {} };
     } catch (error) {
         console.error('Erro na geocodificação reversa:', error);
         return { error: 'Endereço desconhecido', address: {} };

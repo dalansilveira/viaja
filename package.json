@@ -17,7 +17,9 @@
   },
   "dependencies": {
     "@capacitor/cli": "^7.4.2",
-    "@capacitor/core": "^7.4.2"
+    "@capacitor/core": "^7.4.2",
+    "@dataconnect/generated": "file:dataconnect-generated/js/example-connector",
+    "firebase": "^11.10.0"
   },
   "repository": {
     "type": "git",

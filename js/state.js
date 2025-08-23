@@ -103,27 +103,17 @@ export function resetTripData() {
 
 /**
  * Salva o estado atual da aplicação no localStorage.
+ * (Desativado para evitar a restauração do estado ao recarregar)
  */
 export function saveAppState() {
-    const appState = {
-        currentOrigin,
-        currentDestination,
-        tripData,
-        isMapVisible
-    };
-    localStorage.setItem('viaja_appState', JSON.stringify(appState));
+    // A funcionalidade de salvar o estado foi desativada.
+    // localStorage.clear(); // Opcional: limpa qualquer estado antigo
 }
 
 /**
  * Carrega o estado da aplicação do localStorage.
+ * (Desativado para evitar a restauração do estado ao recarregar)
  */
 export function loadAppState() {
-    const savedState = localStorage.getItem('viaja_appState');
-    if (savedState) {
-        const appState = JSON.parse(savedState);
-        setCurrentOrigin(appState.currentOrigin);
-        setCurrentDestination(appState.currentDestination);
-        setMapVisible(appState.isMapVisible);
-        Object.assign(tripData, appState.tripData);
-    }
+    // A funcionalidade de carregar o estado foi desativada.
 }

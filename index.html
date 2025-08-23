@@ -107,7 +107,8 @@
             Instalar
         </button>
     </div>
-
+ <!-- Contêiner principal da aplicação -->
+ <div class="pwa-container">
     <!-- Profile Modal -->
     <div id="profile-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
         <div class="login-content">
@@ -147,6 +148,9 @@
                 <!-- Full Name -->
                 <input id="profile-name" type="text" placeholder="Nome Completo" class="login-input">
 
+                <!-- Email -->
+                <input id="profile-email" type="email" placeholder="E-mail" class="login-input bg-gray-100 dark:bg-gray-800 cursor-not-allowed" readonly>
+
                 <!-- Address -->
                 <input id="profile-address" type="text" placeholder="Endereço" class="login-input">
 
@@ -154,11 +158,33 @@
                 <input id="profile-neighborhood" type="text" placeholder="Bairro" class="login-input">
                 
                 <!-- Phone Number -->
-                <input id="profile-phone" type="tel" placeholder="Telefone" class="login-input" readonly>
+                <input id="profile-phone" type="tel" placeholder="Telefone" class="login-input">
             </div>
 
         <div class="login-buttons-container mt-4">
                 <button id="save-profile-button" class="modal-button login">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="login-content">
+            <button id="close-history-modal-button" class="close-modal">&times;</button>
+            <h2 class="text-xl font-bold text-center">Histórico de Corridas</h2>
+            <div id="ride-history-list" class="flex flex-col gap-4 w-full max-h-96 overflow-y-auto">
+                <!-- Itens do histórico serão inseridos aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Favorites Modal -->
+    <div id="favorites-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="login-content">
+            <button id="close-favorites-modal-button" class="close-modal">&times;</button>
+            <h2 class="text-xl font-bold text-center">Locais Favoritos</h2>
+            <div id="modal-favorites-list" class="flex flex-col gap-4 w-full max-h-96 overflow-y-auto">
+                <!-- Itens dos favoritos serão inseridos aqui -->
             </div>
         </div>
     </div>
@@ -186,181 +212,153 @@
         </div>
     </div>
 
-    <!-- Contêiner principal da aplicação -->
-    <div class="pwa-container">
-        <header class="header flex-shrink-0 mb-4">
-            <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-2 header-title select-none">
-                <img src="imgs/logo.webp" alt="Logo Via Já" class="w-10 h-10">
-                Via Já
-            </h1>
-            <div class="flex items-center gap-4">
-                <button id="share-button" class="p-2 rounded-lg transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Controles Superiores -->
+    <div id="destination-container">
+        <div class="relative">
+            <button id="auth-menu-button" class="p-2 rounded-lg transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <div id="auth-menu" class="absolute left-0 mt-2 w-48 rounded-md shadow-lg py-1 z-20 hidden">
+                <a href="#" id="auth-menu-profile" class="block px-4 py-2 text-sm rounded-md">Perfil</a>
+                <a href="#" id="auth-menu-preferences" class="block px-4 py-2 text-sm rounded-md">Preferências</a>
+                <a href="#" id="auth-menu-history" class="flex items-center gap-3 block px-4 py-2 text-sm rounded-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414L6 10.586V12h1.414l4.293-4.293z" clip-rule="evenodd" />
+                    </svg>
+                    Histórico
+                </a>
+                <a href="#" id="auth-menu-favorites" class="flex items-center gap-3 block px-4 py-2 text-sm rounded-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.176 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.927 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
+                    </svg>
+                    Favoritos
+                </a>
+                <a href="#" id="share-button" class="flex items-center gap-3 block px-4 py-2 text-sm rounded-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
                         <polyline points="16 6 12 2 8 6"></polyline>
                         <line x1="12" y1="2" x2="12" y2="15"></line>
                     </svg>
-                </button>
-                <button id="theme-toggle" class="p-2 rounded-lg transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    Compartilhar
+                </a>
+                <a href="#" id="theme-toggle" class="flex items-center gap-3 block px-4 py-2 text-sm rounded-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
                     </svg>
-                </button>
-                <button id="toggle-map-button" class="p-2 rounded-lg transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
-                        <line x1="8" y1="2" x2="8" y2="18"></line>
-                        <line x1="16" y1="6" x2="16" y2="22"></line>
+                    Alternar Tema
+                </a>
+                <a href="#" id="auth-menu-logout" class="block px-4 py-2 text-sm rounded-md">Desconectar</a>
+                <a href="#" id="auth-menu-help" class="block px-4 py-2 text-sm rounded-md">Ajuda e Suporte</a>
+            </div>
+        </div>
+        <div class="destination-item">
+            <div class="input-group input-group-destination">
+                <input type="text" id="destination-input" placeholder="Para onde?" autocomplete="off" class="destination-input address-input flex-grow">
+                <button type="button" id="select-destination-button" class="select-in-field-button" title="Selecionar no mapa">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
                     </svg>
                 </button>
-                <div class="relative">
-                    <button id="auth-menu-button" class="p-2 rounded-lg transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                    <div id="auth-menu" class="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-20 hidden">
-                        <a href="#" id="auth-menu-profile" class="block px-4 py-2 text-sm rounded-md">Perfil</a>
-                        <a href="#" id="auth-menu-preferences" class="block px-4 py-2 text-sm rounded-md">Preferências</a>
-                        <a href="#" id="auth-menu-logout" class="block px-4 py-2 text-sm rounded-md">Desconectar</a>
-                        <a href="#" id="auth-menu-help" class="block px-4 py-2 text-sm rounded-md">Ajuda e Suporte</a>
-                    </div>
-                </div>
             </div>
-        </header>
-
-        <div id="map-container" class="relative mb-4">
-            <div id="map" class="h-full w-full rounded-xl"></div>
-            <div id="map-message" class="map-message">Toque no mapa para selecionar o local</div>
-            <div id="route-info-display" class="text-center font-semibold text-gray-700 dark:text-gray-300 my-2 hidden"></div>
-            <button id="recenter-map-button" class="leaflet-control leaflet-bar absolute bg-white dark:bg-gray-800 p-2 rounded-md shadow-md cursor-pointer" title="Recentralizar Mapa">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.146 4.854l-1.489 1.489A8 8 0 1 0 12 20a8.094 8.094 0 0 0 7.371-4.886 1 1 0 1 0-1.842-.779A6.071 6.071 0 0 1 12 18a6 6 0 1 1 4.243-10.243l-1.39 1.39a.5.5 0 0 0 .354.854H19.5A.5.5 0 0 0 20 9.5V5.207a.5.5 0 0 0-.854-.353z"/>
-                </svg>
-            </button>
-            <button id="toggle-location-button" class="leaflet-control leaflet-bar absolute bottom-5 right-5 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md cursor-pointer" title="Rastreamento de Localização">
-                <svg id="location-toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="2.25" stroke-linecap="round" stroke-linejoin="round"/>
-                    <circle cx="12" cy="12" r="6.75" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 5.25V3" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M18.75 12H21" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M12 18.75V21" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M5.25 12H3" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
+            <div id="destination-suggestions" class="autocomplete-suggestions"></div>
         </div>
+    </div>
+
+    <!-- Contêiner do Mapa (Fixo no Topo) -->
+    <div id="map-container">
+        <div id="map" class="h-full w-full"></div>
+        <div id="map-message" class="map-message">Toque no mapa para selecionar o local</div>
+        <div id="route-info-display" class="text-center font-semibold text-gray-700 dark:text-gray-300 my-2 hidden"></div>
+        <button id="recenter-map-button" class="leaflet-control leaflet-bar absolute bg-white dark:bg-gray-800 p-2 rounded-md shadow-md cursor-pointer" title="Recentralizar Mapa">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.146 4.854l-1.489 1.489A8 8 0 1 0 12 20a8.094 8.094 0 0 0 7.371-4.886 1 1 0 1 0-1.842-.779A6.071 6.071 0 0 1 12 18a6 6 0 1 1 4.243-10.243l-1.39 1.39a.5.5 0 0 0 .354.854H19.5A.5.5 0 0 0 20 9.5V5.207a.5.5 0 0 0-.854-.353z"/>
+            </svg>
+        </button>
+        <button id="toggle-location-button" class="leaflet-control leaflet-bar absolute bottom-5 right-5 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md cursor-pointer" title="Rastreamento de Localização">
+            <svg id="location-toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="6.75" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 5.25V3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.75 12H21" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 18.75V21" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5.25 12H3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <button type="button" id="submit-button" class="button-submit hidden" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 mr-2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+            Solicitar corrida
+        </button>
+    </div>
+
+   
  
         <main class="flex-grow flex flex-col justify-start gap-4">
-            <div id="ride-request-panel" class="content-panel">
-                <form id="ride-request-form" class="ride-request-form">
-                    <div class="input-group input-group-origin">
-                        <input type="text" id="origin-input" placeholder="Meu local" autocomplete="off" readonly class="address-input">
-                        <button type="button" id="select-origin-button" class="select-in-field-button" title="Selecionar no mapa">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-blue-svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+            <div id="vehicle-selection-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+                <div class="login-content">
+                    <button id="close-vehicle-selection-modal-button" class="close-modal">&times;</button>
+                    <h2 class="text-xl font-bold mb-2 text-center">Selecione o tipo de veículo</h2>
+                    <div id="trip-info" class="text-center text-sm text-gray-500 mb-4">
+                        <p id="estimated-distance-time"></p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button type="button" class="vehicle-button" data-vehicle="Moto">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 motorcycle-icon">
+                                <path d="M2.5 13.5L4 12c.5-1.5 2-2.5 3.5-2.5H16c1 0 2 .5 2.5 1l.5 1.5c.5.5.5 1.5 0 2l-1 1c-.5.5-1.5 1-2 1H7.5c-1.5 0-3-.5-4-1.5L2.5 13.5zM18.5 18a3 3 0 100-6 3 3 0 000 6zM6 18a3 3 0 100-6 3 3 0 000 6z"/>
                             </svg>
+                            Moto
+                            <span class="vehicle-price"></span>
+                        </button>
+                        <button type="button" class="vehicle-button" data-vehicle="Carro">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                                <path d="M10 2l-2 2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-4l-2-2zM4 12h16M4 18h16"></path><circle cx="8" cy="14" r="2"></circle><circle cx="16" cy="14" r="2"></circle>
+                            </svg>
+                            Carro
+                            <span class="vehicle-price"></span>
+                        </button>
+                        <button type="button" class="vehicle-button" data-vehicle="Lotação">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                                <path d="M18 10l-4-4h-4l-4 4"></path><path d="M18 10v4l-4 4h-4l-4-4v-4"></path><path d="M12 6l-4 4-4-4"></path><path d="M12 18l4-4 4 4"></path><path d="M20 12l-8-8-8 8"></path><path d="M4 12v6l8 4 8-4v-6"></path><line x1="12" y1="18" x2="12" y2="22"></line>
+                            </svg>
+                            Lotação
+                            <span class="vehicle-price"></span>
+                        </button>
+                        <button type="button" class="vehicle-button" data-vehicle="Entrega">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                                <path d="M2 13.5l1.5-1.5c1-1 2.5-1.5 4-1.5h10c1.5 0 3 1 3.5 2.5l1 1c.5.5.5 1.5 0 2l-1 1c-.5.5-1.5 1-2 1h-10c-1.5 0-3-.5-4-1.5l-1-1.5zM19 18a3 3 0 100-6 3 3 0 000 6zM6 18a3 3 0 100-6 3 3 0 000 6z"/>
+                            </svg>
+                            Entrega
+                            <span class="vehicle-price"></span>
                         </button>
                     </div>
-                    <div id="origin-suggestions" class="autocomplete-suggestions"></div>
-                    <div id="destination-container">
-                        <div class="destination-item">
-                            <div class="input-group input-group-destination">
-                                <input type="text" id="destination-input" placeholder="Para onde?" autocomplete="off" class="destination-input address-input flex-grow">
-                                <input type="text" id="destination-number-input" placeholder="Nº" autocomplete="off" class="destination-number-input">
-                                <button type="button" id="select-destination-button" class="select-in-field-button" title="Selecionar no mapa">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <div id="destination-suggestions" class="autocomplete-suggestions"></div>
-                        </div>
-                    </div>
-                    <div id="destination-history" class="mt-2 hidden">
-                        <div class="tabs-container">
-                            <button id="show-history-button" type="button" class="tab-button active">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414L6 10.586V12h1.414l4.293-4.293z" clip-rule="evenodd" />
-                                </svg>
-                                <span>Histórico</span>
-                            </button>
-                            <button id="show-favorites-button" type="button" class="tab-button">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.176 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.927 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                                </svg>
-                                <span>Favoritos</span>
-                            </button>
-                        </div>
-                        <div id="destination-history-list" class="tab-content active"></div>
-                        <div id="destination-favorites-list" class="tab-content"></div>
-                    </div>
-                    <button type="button" id="clear-button" class="button-clear">Limpar</button>
-                    <button type="button" id="submit-button" class="button-submit hidden" disabled>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 mr-2">
-                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                        </svg>
-                        Solicitar corrida
-                    </button>
-                </form>
-            </div>
-            <div id="vehicle-selection-panel" class="vehicle-selection-panel hidden">
-                <h2 class="text-xl font-bold mb-2 text-center">Selecione o tipo de veículo</h2>
-                <div id="trip-info" class="text-center text-sm text-gray-500 mb-4">
-                    <p id="estimated-distance-time"></p>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <button type="button" class="vehicle-button" data-vehicle="Moto">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 motorcycle-icon">
-                            <path d="M2.5 13.5L4 12c.5-1.5 2-2.5 3.5-2.5H16c1 0 2 .5 2.5 1l.5 1.5c.5.5.5 1.5 0 2l-1 1c-.5.5-1.5 1-2 1H7.5c-1.5 0-3-.5-4-1.5L2.5 13.5zM18.5 18a3 3 0 100-6 3 3 0 000 6zM6 18a3 3 0 100-6 3 3 0 000 6z"/>
-                        </svg>
-                        Moto
-                        <span class="vehicle-price"></span>
-                    </button>
-                    <button type="button" class="vehicle-button" data-vehicle="Carro">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
-                            <path d="M10 2l-2 2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-4l-2-2zM4 12h16M4 18h16"></path><circle cx="8" cy="14" r="2"></circle><circle cx="16" cy="14" r="2"></circle>
-                        </svg>
-                        Carro
-                        <span class="vehicle-price"></span>
-                    </button>
-                    <button type="button" class="vehicle-button" data-vehicle="Lotação">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
-                            <path d="M18 10l-4-4h-4l-4 4"></path><path d="M18 10v4l-4 4h-4l-4-4v-4"></path><path d="M12 6l-4 4-4-4"></path><path d="M12 18l4-4 4 4"></path><path d="M20 12l-8-8-8 8"></path><path d="M4 12v6l8 4 8-4v-6"></path><line x1="12" y1="18" x2="12" y2="22"></line>
-                        </svg>
-                        Lotação
-                        <span class="vehicle-price"></span>
-                    </button>
-                    <button type="button" class="vehicle-button" data-vehicle="Entrega">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
-                            <path d="M2 13.5l1.5-1.5c1-1 2.5-1.5 4-1.5h10c1.5 0 3 1 3.5 2.5l1 1c.5.5.5 1.5 0 2l-1 1c-.5.5-1.5 1-2 1h-10c-1.5 0-3-.5-4-1.5l-1-1.5zM19 18a3 3 0 100-6 3 3 0 000 6zM6 18a3 3 0 100-6 3 3 0 000 6z"/>
-                        </svg>
-                        Entrega
-                        <span class="vehicle-price"></span>
-                    </button>
-                </div>
-                <button id="back-to-form-button" class="mt-4 button-clear">Voltar</button>
             </div>
-            <div id="ride-status-panel" class="ride-status-panel hidden">
-                <div class="flex flex-col items-center">
-                    <div id="loader" class="loader mb-4"></div>
-                    <p id="status-message" class="text-lg font-semibold mb-2 text-center"></p>
-                    <div class="mt-4 text-center text-sm text-gray-500">
-                        <p id="status-distance" class="font-medium mb-2"></p>
-                        <p id="status-price" class="font-medium text-lg text-blue-500"></p>
-                        <p id="status-origin" class="font-medium flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-blue-svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                            </svg>
-                            <span id="status-origin-text"></span>
-                        </p>
-                        <p id="status-destination" class="font-medium flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                            </svg>
-                            <span id="status-destination-text"></span>
-                        </p>
+            <div id="ride-status-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+                <div class="login-content">
+                    <div class="flex flex-col items-center">
+                        <div id="loader" class="loader mb-4"></div>
+                        <p id="status-message" class="text-lg font-semibold mb-2 text-center"></p>
+                        <div class="mt-4 text-center text-sm text-gray-500">
+                            <p id="status-distance" class="font-medium mb-2"></p>
+                            <p id="status-price" class="font-medium text-lg text-blue-500"></p>
+                            <p id="status-origin" class="font-medium flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-blue-svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                </svg>
+                                <span id="status-origin-text"></span>
+                            </p>
+                            <p id="status-destination" class="font-medium flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                </svg>
+                                <span id="status-destination-text"></span>
+                            </p>
+                        </div>
+                        <button id="cancel-button" class="mt-6 button-clear">Cancelar</button>
                     </div>
-                    <button id="cancel-button" class="mt-6 button-clear">Cancelar</button>
                 </div>
             </div>
         </main>
@@ -368,6 +366,10 @@
            Via Já - Todos os Direitos Reservados ®
         </footer>
     </div>
+    <script type="module" src="js/firebase-config.js"></script>
     <script type="module" src="js/app.js"></script>
+
+    <!-- Console de Depuração Temporário -->
+    <pre id="debug-console" class="debug-console"></pre>
 </body>
 </html>

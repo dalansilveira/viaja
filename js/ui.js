@@ -2,9 +2,9 @@ import { dom } from './dom.js';
 import * as state from './state.js';
 import { saveAppState } from './state.js';
 import { reverseGeocode, fetchAddressSuggestions } from './api.js';
-import { formatPlaceForDisplay } from './utils.js';
+import { formatPlaceForDisplay, haversineDistance } from './utils.js';
 import { addOrMoveMarker, traceRoute } from './map.js';
-import { saveDestinationToHistory, toggleShowFavorites, renderHistoryList } from './history.js';
+import { saveDestinationToHistory } from './history.js';
 
 let mapMessageTimeout;
 
@@ -21,55 +21,20 @@ export function showMessage(message) {
 }
 
 /**
- * Exibe ou oculta o contêiner do mapa.
- * @param {boolean} visible - Se o mapa deve ser visível.
+ * Garante que o mapa seja redimensionado e centralizado corretamente.
  */
-export function toggleMapVisibility(forceVisible = null, fromButton = false) {
-    const isCurrentlyVisible = dom.mapContainer.classList.contains('visible');
-    let shouldBeVisible = forceVisible !== null ? forceVisible : !isCurrentlyVisible;
+export function refreshMap() {
+    setTimeout(() => {
+        if (!state.map) return;
+        state.map.invalidateSize();
 
-    // Se a chamada veio do botão, alternar a visibilidade
-    if (fromButton) {
-        shouldBeVisible = !isCurrentlyVisible;
-    } else {
-        // Se não veio do botão, e o mapa está visível e não há modo de seleção, ocultar
-        // Isso evita que o mapa permaneça visível quando não está sendo usado para seleção
-        if (isCurrentlyVisible && !state.currentSelectionMode) {
-            shouldBeVisible = false;
+        // Centraliza o mapa com base no estado atual
+        if (state.currentOrigin && state.currentDestination) {
+            state.map.fitBounds([state.currentOrigin.latlng, state.currentDestination.latlng], { padding: [50, 50] });
+        } else if (state.currentOrigin) {
+            state.map.panTo(state.currentOrigin.latlng);
         }
-    }
-
-    dom.mapContainer.classList.toggle('visible', shouldBeVisible);
-    state.setMapVisible(shouldBeVisible);
-    state.saveAppState();
-
-    if (shouldBeVisible) {
-        setTimeout(() => {
-            if (!state.map) return;
-            state.map.invalidateSize();
-
-            // Centraliza o mapa com base no estado atual
-            if (state.currentOrigin && state.currentDestination) {
-                state.map.fitBounds([state.currentOrigin.latlng, state.currentDestination.latlng], { padding: [50, 50] });
-            } else if (state.currentOrigin) {
-                state.map.panTo(state.currentOrigin.latlng);
-            } else if (state.currentUserCoords) {
-                state.map.panTo(state.currentUserCoords);
-            }
-        }, 500); // Um pequeno atraso para garantir que o contêiner do mapa esteja visível
-
-        // Exibir a mensagem do mapa apenas se estiver no modo de seleção
-        if (state.currentSelectionMode) {
-            dom.mapMessage.style.display = 'block';
-            clearTimeout(mapMessageTimeout);
-            mapMessageTimeout = setTimeout(() => {
-                dom.mapMessage.style.display = 'none';
-            }, 5000);
-        }
-    } else {
-        dom.mapMessage.style.display = 'none';
-        clearTimeout(mapMessageTimeout);
-    }
+    }, 100); // Um pequeno atraso para garantir que o mapa esteja pronto.
 }
 
 /**
@@ -130,80 +95,74 @@ function getNotificationIcon(type) {
  */
 export function switchPanel(panelId) {
     dom.rideRequestPanel.classList.add('hidden');
-    dom.vehicleSelectionPanel.classList.add('hidden');
     dom.rideStatusPanel.classList.add('hidden');
     document.getElementById(panelId).classList.remove('hidden');
 }
 
 /**
- * Lida com cliques no mapa para selecionar origem/destino.
+ * Lida com cliques no mapa, tratando a definição de origem e destino.
  * @param {object} e - Objeto do evento do clique.
  */
 export async function handleMapClick(e) {
-    if (!state.currentSelectionMode || state.isDraggingMarker) return;
+    if (state.isDraggingMarker) return;
 
     const latlng = e.latlng;
-    const type = state.currentSelectionMode;
-    
-    let inputEl;
 
-    if (type === 'origin') {
-        inputEl = dom.originInput;
-    } else if (type === 'destination') {
-        inputEl = dom.destinationInput;
-    }
+    // Caso 1: Modo de seleção de destino está ativo
+    if (state.currentSelectionMode === 'destination') {
+        const inputEl = dom.destinationInput;
+        if (!inputEl) return;
 
-    if (!inputEl) return;
+        inputEl.value = 'Buscando endereço...';
+        const fullAddressData = await reverseGeocode(latlng.lat, latlng.lng);
+        const addressText = formatPlaceForDisplay(fullAddressData) || 'Endereço desconhecido';
+        
+        inputEl.value = addressText;
+        fullAddressData.display_name = addressText;
 
-    const name = (type === 'origin') ? 'Origem' : 'Destino';
-
-    inputEl.value = 'Buscando endereço...';
-
-    const fullAddressData = await reverseGeocode(latlng.lat, latlng.lng);
-    const addressText = formatPlaceForDisplay(fullAddressData) || 'Endereço desconhecido';
-    
-    inputEl.value = addressText;
-    fullAddressData.display_name = addressText;
-
-    // Tenta extrair e preencher o número do endereço de forma mais robusta
-    if (type === 'destination') {
         let houseNumber = '';
         if (fullAddressData.address && fullAddressData.address.house_number) {
             houseNumber = fullAddressData.address.house_number;
         } else {
-            // Fallback: Tenta extrair o número do display_name (ex: "Rua ABC, 123")
-            const match = fullAddressData.display_name.match(/^(\d+),\s/);
+            const match = fullAddressData.display_name.match(/(?:,\s*|\s+)(\d+)$|^(\d+),/);
             if (match) {
-                houseNumber = match[1];
+                houseNumber = match[1] || match[2];
             }
         }
-        dom.destinationNumberInput.value = houseNumber;
-    }
 
-    // Adiciona as coordenadas ao dataset do input para o traceRoute funcionar
-    inputEl.dataset.lat = latlng.lat;
-    inputEl.dataset.lng = latlng.lng;
+        inputEl.dataset.lat = latlng.lat;
+        inputEl.dataset.lng = latlng.lng;
 
-    if (type === 'origin') {
-        state.setCurrentOrigin({ latlng, data: fullAddressData });
-        addOrMoveMarker(latlng, 'origin', 'Origem');
-        dom.originInput.parentElement.classList.add('input-filled');
-    } else {
         state.setCurrentDestination({ latlng, data: fullAddressData });
         addOrMoveMarker(latlng, 'destination', 'Destino');
         dom.destinationInput.closest('.input-group').classList.add('input-filled');
-    }
 
-    saveAppState(); // Salva o estado após a seleção no mapa
-    traceRoute();
-    if (state.currentOrigin && state.currentDestination) {
-        dom.submitButton.disabled = false;
-    }
+        saveAppState();
+        traceRoute();
+        if (state.currentOrigin && state.currentDestination) {
+            dom.submitButton.disabled = false;
+        }
 
-    // Desativa o modo de seleção e o foco do input após o clique
-    state.setCurrentSelectionMode(null);
-    setSelectionButtonState(null); // Desativa o estado visual
-    dom.mapMessage.style.display = 'none';
+        state.setCurrentSelectionMode(null);
+        setSelectionButtonState(null);
+        dom.mapMessage.style.display = 'none';
+
+    // Caso 2: Nenhum modo de seleção ativo (ação padrão é definir origem)
+    } else if (!state.currentSelectionMode) {
+        addOrMoveMarker(latlng, 'origin');
+        try {
+            const addressData = await reverseGeocode(latlng.lat, latlng.lng);
+            state.setCurrentOrigin({
+                latlng: latlng,
+                data: addressData
+            });
+            traceRoute();
+        } catch (error) {
+            console.error("Erro ao obter endereço para o ponto de origem:", error);
+            showPushNotification("Não foi possível obter o endereço para este local.", "error");
+        }
+    }
+    // Se houver outro modo de seleção no futuro, ele será ignorado aqui.
 }
 
 /**
@@ -218,38 +177,57 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
 
     if (query.length < 2) return;
 
+    // 1. Tenta "adivinhar" com base no histórico/favoritos
     const history = JSON.parse(localStorage.getItem('viaja_destination_history')) || [];
     const favorites = JSON.parse(localStorage.getItem('viaja_favorite_destinations')) || [];
-
-    const localResults = [...favorites, ...history];
-    const uniqueLocalResults = Array.from(new Map(localResults.map(item => [item.place_id, item])).values());
-
-    const filteredLocalResults = uniqueLocalResults.filter(place =>
-        place.display_name.toLowerCase().includes(query)
+    const combinedLocal = [...favorites, ...history];
+    
+    const bestGuess = combinedLocal.find(place => 
+        place.display_name.toLowerCase().startsWith(query)
     );
 
-    const displayedPlaceIds = new Set();
+    // Usa a "adivinhação" como a query principal se encontrada, senão usa a query original
+    const searchQuery = bestGuess ? bestGuess.display_name : query;
 
-    // Renderiza os resultados locais
-    filteredLocalResults.forEach(place => {
-        const isFavorite = favorites.some(fav => fav.place_id === place.place_id);
-        const icon = isFavorite ? '⭐' : '🕒';
-        renderSuggestion(place, `${icon} ${place.display_name}`, inputEl, suggestionsEl);
-        displayedPlaceIds.add(place.place_id);
-    });
+    // 2. Coleta os resultados da API com a query refinada
+    const proximityCoords = state.currentUserCoords || null;
+    const apiResults = await fetchAddressSuggestions(searchQuery, proximityCoords);
 
-    // Busca e renderiza os resultados da API
-    if (query.length >= 3) {
-        const apiResults = await fetchAddressSuggestions(query);
-        apiResults.forEach(place => {
-            if (!displayedPlaceIds.has(place.place_id)) {
-                renderSuggestion(place, place.display_name, inputEl, suggestionsEl);
-                displayedPlaceIds.add(place.place_id);
-            }
+    // Combina e remove duplicatas (a busca da API já é a principal fonte)
+    const uniqueResults = Array.from(new Map(apiResults.map(item => [item.place_id || `${item.lat},${item.lon}`, item])).values());
+
+    // 3. Ordenar por distância se a localização do usuário for conhecida
+    if (proximityCoords) {
+        uniqueResults.sort((a, b) => {
+            const distA = haversineDistance(proximityCoords, a);
+            const distB = haversineDistance(proximityCoords, b);
+            return distA - distB;
         });
     }
 
-    if (suggestionsEl.children.length > 0) {
+    // 4. Limitar ao máximo de 6 resultados
+    const finalResults = uniqueResults.slice(0, 6);
+
+    // 5. Renderizar apenas se houver resultados
+    if (finalResults.length > 0) {
+        // Adiciona o cabeçalho
+        const header = document.createElement('div');
+        header.className = 'suggestion-header';
+        header.textContent = 'Selecione um endereço';
+        suggestionsEl.appendChild(header);
+
+        // Renderiza cada item
+        finalResults.forEach(place => {
+            const isFavorite = favorites.some(fav => fav.place_id === place.place_id);
+            const isHistory = history.some(hist => hist.place_id === place.place_id);
+            let iconType = 'location';
+            if (isFavorite) iconType = 'favorite';
+            else if (isHistory) iconType = 'history';
+            
+            renderSuggestion(place, place.display_name, inputEl, suggestionsEl, iconType);
+        });
+
+        // Exibe o contêiner
         suggestionsEl.style.display = 'block';
     }
 }
@@ -260,17 +238,52 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
  * @param {string} displayText - O texto a ser exibido.
  * @param {HTMLInputElement} inputEl - O elemento de input.
  * @param {HTMLDivElement} suggestionsEl - O container para as sugestões.
+ * @param {string} iconType - O tipo de ícone ('favorite', 'history', 'location').
  */
-function renderSuggestion(place, displayText, inputEl, suggestionsEl) {
+function renderSuggestion(place, _, inputEl, suggestionsEl, iconType) {
     const suggestionDiv = document.createElement('div');
-    suggestionDiv.innerHTML = displayText; // Usa innerHTML para renderizar o ícone
-    suggestionDiv.className = 'suggestion-item'; // Adiciona uma classe para estilização
+    suggestionDiv.className = 'suggestion-item';
+
+    const currentCity = state.currentOrigin?.data?.address?.city || state.currentOrigin?.data?.address?.town || '';
+
+    const stateAbbreviations = {
+        'Acre': 'AC', 'Alagoas': 'AL', 'Amapá': 'AP', 'Amazonas': 'AM', 'Bahia': 'BA', 'Ceará': 'CE',
+        'Distrito Federal': 'DF', 'Espírito Santo': 'ES', 'Goiás': 'GO', 'Maranhão': 'MA',
+        'Mato Grosso': 'MT', 'Mato Grosso do Sul': 'MS', 'Minas Gerais': 'MG', 'Pará': 'PA',
+        'Paraíba': 'PB', 'Paraná': 'PR', 'Pernambuco': 'PE', 'Piauí': 'PI', 'Rio de Janeiro': 'RJ',
+        'Rio Grande do Norte': 'RN', 'Rio Grande do Sul': 'RS', 'Rondônia': 'RO', 'Roraima': 'RR',
+        'Santa Catarina': 'SC', 'São Paulo': 'SP', 'Sergipe': 'SE', 'Tocantins': 'TO'
+    };
+
+    const road = place.address?.road || '';
+    const houseNumber = place.address?.house_number || '';
+    const mainText = [road, houseNumber].filter(Boolean).join(', ');
+
+    const neighbourhood = place.address?.suburb || place.address?.neighbourhood || '';
+    const city = place.address?.city || place.address?.town || place.address?.village || '';
+    const stateName = place.address?.state || '';
+    const stateAbbr = stateAbbreviations[stateName] || stateName;
+    const subtext = [city, stateAbbr].filter(Boolean).join(', ');
+
+    const cityMismatch = currentCity && city && currentCity.toLowerCase() !== city.toLowerCase();
+
+    const iconHtml = {
+        favorite: `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-yellow-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`,
+        history: `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+        location: `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`
+    }[iconType];
+
+    suggestionDiv.innerHTML = `
+        <div class="suggestion-icon">${iconHtml}</div>
+        <div class="suggestion-text">
+            <div class="suggestion-main-text">${mainText}</div>
+            ${neighbourhood ? `<div class="suggestion-neighbourhood-text">${neighbourhood}</div>` : ''}
+            <div class="suggestion-sub-text ${cityMismatch ? 'city-mismatch' : ''}">${subtext}</div>
+        </div>
+    `;
 
     suggestionDiv.addEventListener('click', () => {
         inputEl.value = place.display_name; // Usa o nome limpo sem o ícone
-        if (inputEl.id === 'destination-input' && place.number) {
-            dom.destinationNumberInput.value = place.number;
-        }
         suggestionsEl.innerHTML = '';
         suggestionsEl.style.display = 'none';
 
@@ -278,15 +291,9 @@ function renderSuggestion(place, displayText, inputEl, suggestionsEl) {
         inputEl.dataset.lat = latlng.lat;
         inputEl.dataset.lng = latlng.lng;
 
-        if (inputEl.id === 'origin-input') {
-            state.setCurrentOrigin({ latlng, data: place });
-            addOrMoveMarker(latlng, 'origin', 'Origem');
-            dom.originInput.parentElement.classList.add('input-filled');
-        } else {
-            state.setCurrentDestination({ latlng, data: place });
-            addOrMoveMarker(latlng, 'destination', 'Destino');
-            dom.destinationInput.closest('.input-group').classList.add('input-filled');
-        }
+        state.setCurrentDestination({ latlng, data: place });
+        addOrMoveMarker(latlng, 'destination', 'Destino');
+        dom.destinationInput.closest('.input-group').classList.add('input-filled');
 
         saveAppState(); // Salva o estado após selecionar uma sugestão
         traceRoute();
@@ -294,9 +301,7 @@ function renderSuggestion(place, displayText, inputEl, suggestionsEl) {
             dom.submitButton.disabled = false;
         }
 
-        if (!dom.mapContainer.classList.contains('visible')) {
-            toggleMapVisibility(true);
-        }
+        refreshMap();
     });
 
     suggestionsEl.appendChild(suggestionDiv);
@@ -342,8 +347,7 @@ function setupTabs() {
 
             // Renderiza a lista apropriada
             const showFavorites = tab.id === 'show-favorites-button';
-            toggleShowFavorites(showFavorites);
-            renderHistoryList();
+            // A lógica de renderização foi movida para os modais
         });
     });
 }
@@ -353,15 +357,24 @@ function setupTabs() {
  * @param {string|null} type - 'origin', 'destination' ou null para desativar ambos.
  */
 export function setSelectionButtonState(type) {
-    dom.selectOriginButton.classList.remove('selection-active');
-    dom.selectDestinationButton.classList.remove('selection-active');
+    if (dom.selectDestinationButton) {
+        dom.selectDestinationButton.classList.remove('selection-active');
 
-    if (type === 'origin') {
-        dom.selectOriginButton.classList.add('selection-active');
-    } else if (type === 'destination') {
-        dom.selectDestinationButton.classList.add('selection-active');
+        if (type === 'destination') {
+            dom.selectDestinationButton.classList.add('selection-active');
+        }
     }
 }
 
 // Chame a função para configurar as abas
 setupTabs();
+
+/**
+ * Atualiza o console de depuração com novos dados.
+ * @param {object} data - O objeto de dados a ser exibido.
+ */
+export function updateDebugConsole(data) {
+    if (dom.debugConsole) {
+        dom.debugConsole.textContent = JSON.stringify(data, null, 2);
+    }
+}
