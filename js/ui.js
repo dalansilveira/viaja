@@ -315,7 +315,7 @@ export function toggleTheme() {
     
     const logoElement = document.querySelector('h1 img');
     if (logoElement) {
-        logoElement.src = isDark ? 'imgs/logodark.png' : 'imgs/logo.png';
+        logoElement.src = isDark ? 'imgs/logodark.webp' : 'imgs/logo.webp';
     }
 
     // Redesenha a rota para atualizar a cor

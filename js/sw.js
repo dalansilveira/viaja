@@ -7,9 +7,10 @@ const urlsToCache = [
   '/viaja/manifest.json',
   '/viaja/css/style.css',
 
-  // Images (agora em SVG)
-  '/viaja/imgs/logo.svg',
-  '/viaja/imgs/logodark.svg',
+  // Images
+  '/viaja/imgs/logo.webp',
+  '/viaja/imgs/logo.png',
+  '/viaja/imgs/logodark.webp',
   '/viaja/imgs/logodark.png', // Mantendo para o Apple Touch Icon
 
   // JavaScript Modules

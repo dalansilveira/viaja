@@ -284,7 +284,7 @@ function applyTheme() {
     
     const logoElements = document.querySelectorAll('img[alt="Logo Via Já"]');
     logoElements.forEach(logo => {
-        logo.src = isDark ? 'imgs/logodark.png' : 'imgs/logo.png';
+        logo.src = isDark ? 'imgs/logodark.webp' : 'imgs/logo.webp';
     });
 }
 
