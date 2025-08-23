@@ -7,6 +7,7 @@ import { addOrMoveMarker, traceRoute } from './map.js';
 import { saveDestinationToHistory } from './history.js';
 
 let mapMessageTimeout;
+let suggestionAbortController = null;
 
 /**
  * Exibe uma mensagem flutuante temporária.
@@ -171,14 +172,25 @@ export async function handleMapClick(e) {
  * @param {HTMLDivElement} suggestionsEl - O container para as sugestões.
  */
 export async function displayAddressSuggestions(inputEl, suggestionsEl) {
+    if (suggestionAbortController) {
+        suggestionAbortController.abort();
+    }
+    suggestionAbortController = new AbortController();
+    const signal = suggestionAbortController.signal;
+
     const loadingIndicator = document.getElementById('destination-loading-indicator');
     loadingIndicator.style.display = 'block';
 
     suggestionsEl.innerHTML = '';
     const query = inputEl.value.toLowerCase();
-    suggestionsEl.style.display = 'none';
+    const numberMatch = query.match(/(?:,|\s)\s*(\d+)$/);
+    const userTypedNumber = numberMatch ? numberMatch[1] : null;
 
-    if (query.length < 2) return;
+    if (query.length < 2) {
+        loadingIndicator.style.display = 'none';
+        suggestionsEl.style.display = 'none';
+        return;
+    }
 
     //const prefixes = ['rua', 'av', 'av.', 'avenida', 'praça'];
 
@@ -225,7 +237,9 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
 
     // 2. Coleta os resultados da API com a query refinada
     const proximityCoords = state.currentUserCoords || null;
-    const apiResults = await fetchAddressSuggestions(searchQuery, proximityCoords);
+    try {
+        const apiResults = await fetchAddressSuggestions(searchQuery, proximityCoords, signal);
+        if (signal.aborted) return; // Não faz nada se a requisição foi abortada
 
     // Combina e remove duplicatas (a busca da API já é a principal fonte)
     const uniqueResults = Array.from(new Map(apiResults.map(item => [item.place_id || `${item.lat},${item.lon}`, item])).values());
@@ -239,8 +253,8 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
         });
     }
 
-    // 4. Limitar ao máximo de 6 resultados
-    const finalResults = uniqueResults.slice(0, 6);
+    // 4. Limitar ao máximo de 6 resultados e filtrar por resultados que contenham uma rua
+    const finalResults = uniqueResults.filter(place => place.address && place.address.road).slice(0, 6);
 
     // 5. Renderizar apenas se houver resultados
     loadingIndicator.style.display = 'none';
@@ -259,11 +273,26 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
             if (isFavorite) iconType = 'favorite';
             else if (isHistory) iconType = 'history';
             
-            renderSuggestion(place, place.display_name, inputEl, suggestionsEl, iconType);
+            renderSuggestion(place, place.display_name, inputEl, suggestionsEl, iconType, userTypedNumber);
         });
 
-        // Exibe o contêiner
+        // Se houver resultados e nenhum destino estiver selecionado, abra o painel na página 2
+        if (!state.currentDestination) {
+            const panel = dom.collapsiblePanel;
+            if (panel && !panel.classList.contains('open')) {
+                dom.togglePanelButton.click(); // Simula o clique para abrir o painel
+            }
+            showPage('page2');
+        }
         suggestionsEl.style.display = 'block';
+    } else {
+        suggestionsEl.style.display = 'none';
+    }
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error("Erro ao buscar sugestões de endereço:", error);
+            loadingIndicator.style.display = 'none';
+        }
     }
 }
 
@@ -274,8 +303,9 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
  * @param {HTMLInputElement} inputEl - O elemento de input.
  * @param {HTMLDivElement} suggestionsEl - O container para as sugestões.
  * @param {string} iconType - O tipo de ícone ('favorite', 'history', 'location').
+ * @param {string|null} userTypedNumber - O número que o usuário digitou.
  */
-function renderSuggestion(place, _, inputEl, suggestionsEl, iconType) {
+function renderSuggestion(place, _, inputEl, suggestionsEl, iconType, userTypedNumber) {
     const suggestionDiv = document.createElement('div');
     suggestionDiv.className = 'suggestion-item';
 
@@ -291,7 +321,7 @@ function renderSuggestion(place, _, inputEl, suggestionsEl, iconType) {
     };
 
     const road = place.address?.road || '';
-    const houseNumber = place.address?.house_number || '';
+    const houseNumber = place.address?.house_number || userTypedNumber || '';
     const mainText = [road, houseNumber].filter(Boolean).join(', ');
 
     const neighbourhood = place.address?.suburb || place.address?.neighbourhood || '';
@@ -318,28 +348,57 @@ function renderSuggestion(place, _, inputEl, suggestionsEl, iconType) {
     `;
 
     suggestionDiv.addEventListener('click', () => {
-        inputEl.value = place.display_name; // Usa o nome limpo sem o ícone
-        suggestionsEl.innerHTML = '';
-        suggestionsEl.style.display = 'none';
+        const hasHouseNumber = place.address?.house_number || inputEl.value.match(/,\s*\d+/);
+        
+        if (hasHouseNumber) {
+            setDestination(place, inputEl, suggestionsEl);
+        } else {
+            dom.houseNumberModal.classList.remove('hidden');
+            dom.houseNumberInput.focus();
 
-        const latlng = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
-        inputEl.dataset.lat = latlng.lat;
-        inputEl.dataset.lng = latlng.lng;
+            const confirmListener = () => {
+                const houseNumber = dom.houseNumberInput.value;
+                if (houseNumber) {
+                    place.address.house_number = houseNumber;
+                    place.display_name = `${place.address.road}, ${houseNumber}, ${place.address.city}`;
+                    setDestination(place, inputEl, suggestionsEl);
+                    dom.houseNumberModal.classList.add('hidden');
+                    dom.confirmHouseNumberButton.removeEventListener('click', confirmListener);
+                }
+            };
 
-        state.setCurrentDestination({ latlng, data: place });
-        addOrMoveMarker(latlng, 'destination', 'Destino');
-        dom.destinationInput.closest('.input-group').classList.add('input-filled');
+            dom.confirmHouseNumberButton.addEventListener('click', confirmListener);
 
-        saveAppState(); // Salva o estado após selecionar uma sugestão
-        traceRoute();
-        if (state.currentOrigin && state.currentDestination) {
-            dom.submitButton.disabled = false;
+            dom.cancelHouseNumberButton.addEventListener('click', () => {
+                dom.houseNumberModal.classList.add('hidden');
+                dom.confirmHouseNumberButton.removeEventListener('click', confirmListener);
+            }, { once: true });
         }
-
-        refreshMap();
     });
 
     suggestionsEl.appendChild(suggestionDiv);
+}
+
+function setDestination(place, inputEl, suggestionsEl) {
+    inputEl.value = place.display_name;
+    suggestionsEl.innerHTML = '';
+    suggestionsEl.style.display = 'none';
+
+    const latlng = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
+    inputEl.dataset.lat = latlng.lat;
+    inputEl.dataset.lng = latlng.lng;
+
+    state.setCurrentDestination({ latlng, data: place });
+    addOrMoveMarker(latlng, 'destination', 'Destino');
+    dom.destinationInput.closest('.input-group').classList.add('input-filled');
+
+    saveAppState();
+    traceRoute();
+    if (state.currentOrigin && state.currentDestination) {
+        dom.goButton.classList.remove('hidden');
+    }
+
+    refreshMap();
 }
 
 /**
@@ -411,5 +470,49 @@ setupTabs();
 export function updateDebugConsole(data) {
     if (dom.debugConsole) {
         dom.debugConsole.textContent = JSON.stringify(data, null, 2);
+    }
+}
+
+/**
+ * Configura a funcionalidade do painel recolhível.
+ */
+export function setupCollapsiblePanel() {
+    const toggleButton = dom.togglePanelButton;
+    const panel = dom.collapsiblePanel;
+    const mapContainer = dom.mapContainer;
+
+    if (toggleButton && panel && mapContainer) {
+        toggleButton.addEventListener('click', () => {
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                mapContainer.style.height = '50vh';
+            } else {
+                mapContainer.style.height = '100vh';
+            }
+            // É crucial invalidar o tamanho do mapa após a transição para que ele se redimensione corretamente.
+            setTimeout(() => {
+                if (state.map) {
+                    state.map.invalidateSize();
+                }
+            }, 300); // 300ms é a duração da transição
+        });
+    }
+}
+
+/**
+ * Mostra uma página específica dentro do painel e esconde as outras.
+ * @param {string} pageId - O ID da página a ser exibida.
+ */
+export function showPage(pageId) {
+    const pageContents = document.querySelectorAll('.page-content');
+    pageContents.forEach(content => {
+        content.classList.add('hidden');
+        content.classList.remove('active');
+    });
+
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) {
+        targetPage.classList.remove('hidden');
+        targetPage.classList.add('active');
     }
 }

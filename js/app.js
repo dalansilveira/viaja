@@ -4,7 +4,7 @@ import { saveAppState, loadAppState } from './state.js';
 import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice } from './utils.js';
 import { getLocationByIP, reverseGeocode } from './api.js';
 import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, startLocationTracking, stopLocationTracking } from './map.js';
-import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState } from './ui.js';
+import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel } from './ui.js';
 import { saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
 import { setupPWA } from './pwa.js';
@@ -136,12 +136,11 @@ function setupAppEventListeners() {
     });
 
     dom.destinationInput.addEventListener('focus', (e) => {
-        if (e.target.value && !state.currentDestination) {
-            displayAddressSuggestions(e.target, dom.destinationSuggestions);
-        }
+        displayAddressSuggestions(e.target, dom.destinationSuggestions);
     });
 
     dom.destinationInput.addEventListener('input', debounce((e) => {
+        if (state.currentDestination) return;
         displayAddressSuggestions(e.target, dom.destinationSuggestions);
         if (e.target.value === '') {
             state.setCurrentDestination(null);
@@ -153,13 +152,6 @@ function setupAppEventListeners() {
             dom.destinationInput.closest('.input-group').classList.remove('input-filled');
         }
     }, 300));
-
-    document.addEventListener('click', (e) => {
-        // Se o clique não foi dentro de um input de destino ou de seu container de sugestões
-        if (!dom.destinationInput.contains(e.target) && !dom.destinationSuggestions.contains(e.target)) {
-            dom.destinationSuggestions.style.display = 'none';
-        }
-    });
 
     dom.themeToggle.addEventListener('click', () => {
         toggleTheme();
@@ -318,6 +310,7 @@ async function initializeMapAndLocation(isDark) {
 async function initializeApp() {
     const isDark = document.body.classList.contains('dark');
     setupAppEventListeners();
+    setupCollapsiblePanel();
     setupPWA();
 
     // Limpa o estado salvo anteriormente para garantir que não seja restaurado

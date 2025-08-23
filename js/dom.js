@@ -71,5 +71,12 @@ export const dom = {
     modalFavoritesList: document.getElementById('modal-favorites-list'),
     toggleLocationButton: document.getElementById('toggle-location-button'),
     recenterMapButton: document.getElementById('recenter-map-button'),
-    debugConsole: document.getElementById('debug-console')
+    debugConsole: document.getElementById('debug-console'),
+    collapsiblePanel: document.getElementById('collapsible-panel'),
+    togglePanelButton: document.getElementById('toggle-panel-button'),
+    panelContent: document.getElementById('panel-content'),
+    houseNumberModal: document.getElementById('house-number-modal'),
+    houseNumberInput: document.getElementById('house-number-input'),
+    confirmHouseNumberButton: document.getElementById('confirm-house-number-button'),
+    cancelHouseNumberButton: document.getElementById('cancel-house-number-button')
 };

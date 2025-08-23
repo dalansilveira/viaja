@@ -201,6 +201,19 @@
         </div>
     </div>
 
+    <!-- House Number Modal -->
+    <div id="house-number-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="login-content">
+            <h2 class="text-xl font-bold text-center">Número da Residência</h2>
+            <p class="text-sm text-center text-gray-600 dark:text-gray-400">Por favor, informe o número do local de destino.</p>
+            <input id="house-number-input" type="number" placeholder="Nº" class="login-input">
+            <div class="login-buttons-container mt-4">
+                <button id="confirm-house-number-button" class="modal-button login">Confirmar</button>
+                <button id="cancel-house-number-button" class="modal-button register">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Offline Dialog -->
     <div id="offline-dialog" class="hidden fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-[10000]">
         <div class="text-center text-white p-8 rounded-lg">
@@ -285,7 +298,6 @@
                     </svg>
                 </button>
             </div>
-            <div id="destination-suggestions" class="autocomplete-suggestions"></div>
         </div>
     </div>
 
@@ -309,6 +321,28 @@
                 <path d="M5.25 12H3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </button>
+    </div>
+
+    <!-- Container do Painel Recolhível -->
+    <div id="panel-container" class="fixed bottom-0 left-0 right-0 z-40 flex justify-center">
+        <div id="collapsible-panel" class="shadow-lg rounded-t-lg transition-all duration-300 ease-in-out w-full max-w-md">
+            <div class="w-full flex justify-center p-2 cursor-pointer" id="toggle-panel-button">
+                <div class="w-10 h-1 rounded-full"></div>
+            </div>
+            <div id="panel-content" class="p-4 overflow-y-auto">
+                <div id="pagination-container">
+                    <div id="page1" class="page-content active">
+                        <p>Conteúdo da Página 1</p>
+                    </div>
+                    <div id="page2" class="page-content hidden">
+                        <div id="destination-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                    <div id="page3" class="page-content hidden">
+                        <p>Conteúdo da Página 3</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
    

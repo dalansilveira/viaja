@@ -11,7 +11,7 @@ const OPENCAGE_API_KEY = '49810e6bb57044b990140e0accfa637e';
  * @param {object} [proximityCoords] - As coordenadas {lat, lng} para priorizar os resultados.
  * @returns {Promise<Array>} Uma lista de locais correspondentes.
  */
-export async function fetchAddressSuggestions(query, proximityCoords = null) {
+export async function fetchAddressSuggestions(query, proximityCoords = null, signal) {
     if (query.length < 2) {
         return [];
     }
@@ -24,7 +24,7 @@ export async function fetchAddressSuggestions(query, proximityCoords = null) {
     }
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { signal });
         const data = await response.json();
         updateDebugConsole(data); // Atualiza o console de depuração
 
