@@ -36,8 +36,6 @@ function clearFieldsAndMap() {
         state.map.removeLayer(state.endCircle);
         state.setEndCircle(null);
     }
-    dom.submitButton.disabled = true;
-    dom.submitButton.classList.add('hidden');
     state.resetTripData();
     dom.estimatedDistanceTimeEl.textContent = '';
     dom.routeInfoDisplay.textContent = '';
@@ -99,7 +97,6 @@ function setupAppEventListeners() {
         // Opcional: pode adicionar alguma lógica aqui se o usuário cancelar
     });
 
-    dom.submitButton.addEventListener('click', requestRide);
     dom.goButton.addEventListener('click', requestRide);
 
 
@@ -136,6 +133,12 @@ function setupAppEventListeners() {
     dom.cancelButton.addEventListener('click', () => {
         switchPanel('ride-request-panel');
         clearFieldsAndMap();
+    });
+
+    dom.destinationInput.addEventListener('focus', (e) => {
+        if (e.target.value && !state.currentDestination) {
+            displayAddressSuggestions(e.target, dom.destinationSuggestions);
+        }
     });
 
     dom.destinationInput.addEventListener('input', debounce((e) => {
@@ -214,7 +217,6 @@ function restoreUIFromState() {
 
     if (state.currentOrigin && state.currentDestination) {
         traceRoute(true); // O 'true' força o ajuste do zoom
-        dom.submitButton.disabled = false;
     }
 
     if (state.tripData.vehicle) {

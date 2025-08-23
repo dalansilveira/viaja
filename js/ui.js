@@ -171,11 +171,45 @@ export async function handleMapClick(e) {
  * @param {HTMLDivElement} suggestionsEl - O container para as sugestões.
  */
 export async function displayAddressSuggestions(inputEl, suggestionsEl) {
+    const loadingIndicator = document.getElementById('destination-loading-indicator');
+    loadingIndicator.style.display = 'block';
+
     suggestionsEl.innerHTML = '';
     const query = inputEl.value.toLowerCase();
     suggestionsEl.style.display = 'none';
 
     if (query.length < 2) return;
+
+    //const prefixes = ['rua', 'av', 'av.', 'avenida', 'praça'];
+
+
+    // Array com os prefixos de endereço
+    const prefixes = [
+        'Rua',
+        'R.',
+        'Avenida',
+        'Av.',
+        'Praça',
+        'Pç.',
+        'Travessa',
+        'Tr.',
+        'Estrada',
+        'Estr.',
+        'Rodovia',
+        'Rod.',
+        'Alameda',
+        'Al.',
+        'Largo',
+        'Viela',
+        'Via',
+        'Trevo',
+        'Passarela'
+    ];
+
+    const cleanedQuery = prefixes.reduce((acc, prefix) => {
+        const regex = new RegExp(`^${prefix}\\s+`, 'i');
+        return acc.replace(regex, '');
+    }, query);
 
     // 1. Tenta "adivinhar" com base no histórico/favoritos
     const history = JSON.parse(localStorage.getItem('viaja_destination_history')) || [];
@@ -187,7 +221,7 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
     );
 
     // Usa a "adivinhação" como a query principal se encontrada, senão usa a query original
-    const searchQuery = bestGuess ? bestGuess.display_name : query;
+    const searchQuery = bestGuess ? bestGuess.display_name : cleanedQuery;
 
     // 2. Coleta os resultados da API com a query refinada
     const proximityCoords = state.currentUserCoords || null;
@@ -209,6 +243,7 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
     const finalResults = uniqueResults.slice(0, 6);
 
     // 5. Renderizar apenas se houver resultados
+    loadingIndicator.style.display = 'none';
     if (finalResults.length > 0) {
         // Adiciona o cabeçalho
         const header = document.createElement('div');

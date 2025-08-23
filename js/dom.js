@@ -7,7 +7,6 @@ export const dom = {
     rideStatusPanel: document.getElementById('ride-status-panel'),
     destinationInput: document.getElementById('destination-input'),
     destinationSuggestions: document.getElementById('destination-suggestions'),
-    submitButton: document.getElementById('submit-button'),
     goButton: document.getElementById('go-button'),
     currentLocationButton: document.getElementById('current-location-button'),
     selectDestinationButton: document.getElementById('select-destination-button'),

@@ -156,8 +156,8 @@ export function traceRoute(fitBounds = false) {
         state.setRouteControl(null);
     }
     dom.routeInfoDisplay.classList.add('hidden');
-    dom.submitButton.classList.add('hidden');
     dom.goButton.classList.add('hidden');
+    dom.destinationInput.classList.add('rounded-r-lg');
 
     // Remove os círculos de início e fim existentes
     if (state.startCircle) {
@@ -250,8 +250,8 @@ export function traceRoute(fitBounds = false) {
         }
 
         // Exibe o botão de solicitar corrida
-        dom.submitButton.classList.remove('hidden');
         dom.goButton.classList.remove('hidden');
+        dom.destinationInput.classList.remove('rounded-r-lg');
     });
 
     state.setRouteControl(control);

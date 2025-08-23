@@ -81,12 +81,11 @@ body {
     background-color: var(--bg-input);
     border-radius: 0.5rem;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border-color);
     transition: border-color 0.2s, background-color 0.2s;
     padding: 0;
-    overflow: hidden;
 }
 
 .input-group.focus-within {
@@ -114,6 +113,23 @@ body {
     border-right: 1px solid var(--border-color);
 }
 
+.loading-indicator-container {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none; /* Oculto por padrão */
+}
+
+.loading-indicator {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #3b82f6;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
 .input-group .destination-number-input {
     width: 5ch;
     text-align: center;
@@ -125,31 +141,45 @@ body {
 
 .input-group-origin {
     border-color: #3b82f6;
-    box-shadow: inset 15px 0 0 0 #3b82f6;
+    box-shadow: inset 30px 0 0 0 #3b82f6;
 }
 
 .input-group-destination {
     border-color: #22c55e;
-    box-shadow: inset 15px 0 0 0 #22c55e;
+    box-shadow: inset 30px 0 0 0 #22c55e;
 }
 
 .select-in-field-button {
     background-color: transparent;
     border: none;
-    border-left: 1px solid var(--border-color);
-    padding: 0 0.75rem;
+    padding: 0.75rem;
     cursor: pointer;
     align-self: stretch;
     display: flex;
     align-items: center;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, opacity 0.3s, transform 0.2s ease-in-out;
 }
 
-.select-in-field-button:hover {
+.select-in-field-button:not(#go-button):hover {
     background-color: #e5e7eb;
 }
 
-body.dark .select-in-field-button:hover {
+#go-button {
+    background-color: #3b82f6; /* Blue for light theme */
+    color: white;
+}
+
+body.dark #go-button {
+    background-color: white; /* White for dark theme */
+    color: #3b82f6;
+}
+
+#go-button:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+body.dark .select-in-field-button:not(#go-button):hover {
     background-color: #374151;
 }
 
