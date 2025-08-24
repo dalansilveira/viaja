@@ -4,10 +4,10 @@ import { saveAppState, loadAppState } from './state.js';
 import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice, normalizeText } from './utils.js';
 import { getLocationByIP, reverseGeocode } from './api.js';
 import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, startLocationTracking, stopLocationTracking } from './map.js';
-import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel } from './ui.js';
+import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel, showPage } from './ui.js';
 import { saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
-import { querySuggestionCache } from './firestore.js';
+import { querySuggestionCache, saveRide, getOngoingRide } from './firestore.js';
 import { setupPWA } from './pwa.js';
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -81,7 +81,14 @@ function requestRide() {
         if (state.currentDestination.data) {
             saveDestinationToHistory(state.currentDestination.data);
         }
-        dom.vehicleSelectionModal.classList.remove('hidden');
+        
+        // Abre o painel na página 3
+        const panel = dom.collapsiblePanel;
+        if (panel && !panel.classList.contains('open')) {
+            dom.togglePanelButton.click();
+        }
+        showPage('page3');
+
         state.setCurrentSelectionMode(null);
     }
 }
@@ -100,11 +107,6 @@ function setupAppEventListeners() {
 
     dom.goButton.addEventListener('click', requestRide);
 
-
-    dom.closeVehicleSelectionModalButton.addEventListener('click', () => {
-        dom.vehicleSelectionModal.classList.add('hidden');
-    });
-
     dom.vehicleButtons.forEach(button => {
         button.addEventListener('click', () => {
             const vehicleType = button.dataset.vehicle;
@@ -113,11 +115,44 @@ function setupAppEventListeners() {
             state.tripData.vehicle = vehicleType;
             state.tripData.fare = estimatedPrice;
             
-            saveAppState(); // Salva o estado após selecionar o veículo
+            saveAppState();
 
-            dom.statusMessage.textContent = `Procurando ${vehicleType} disponível...`;
+            // Preenche os dados na página de confirmação
+            document.getElementById('confirm-distance').textContent = `${state.tripData.distance.toFixed(2)} km`;
+            document.getElementById('confirm-time').textContent = formatTime(state.tripData.time);
+            document.getElementById('confirm-vehicle').textContent = vehicleType;
+            document.getElementById('confirm-fare').textContent = estimatedPrice;
+
+            // Mostra a página de confirmação
+            showPage('page4');
+        });
+    });
+
+    document.getElementById('back-to-vehicles-button').addEventListener('click', () => {
+        showPage('page3');
+    });
+
+    document.getElementById('confirm-ride-button').addEventListener('click', async () => {
+        const userId = localStorage.getItem('user_uid');
+        if (!userId) {
+            showPushNotification("Você precisa estar logado para solicitar uma corrida.", "error");
+            return;
+        }
+
+        const rideData = {
+            userId: userId,
+            origin: state.currentOrigin,
+            destination: state.currentDestination,
+            trip: state.tripData
+        };
+
+        const rideId = await saveRide(rideData);
+
+        if (rideId) {
+            // Lógica para iniciar a busca pela corrida
+            dom.statusMessage.textContent = `Procurando ${state.tripData.vehicle} disponível...`;
             dom.statusDistance.textContent = `Distância: ${state.tripData.distance.toFixed(2)} km | Tempo: ${formatTime(state.tripData.time)}`;
-            dom.statusPrice.textContent = `Preço estimado: ${estimatedPrice}`;
+            dom.statusPrice.textContent = `Preço estimado: ${state.tripData.fare}`;
             
             if (state.currentOrigin && state.currentOrigin.data) {
                 dom.statusOriginText.textContent = state.currentOrigin.data.display_name;
@@ -126,14 +161,19 @@ function setupAppEventListeners() {
                 dom.statusDestinationText.textContent = state.currentDestination.data.display_name;
             }
             
-            dom.vehicleSelectionModal.classList.add('hidden');
-            switchPanel('ride-status-panel');
-        });
+            showPage('page5');
+        } else {
+            showPushNotification("Ocorreu um erro ao salvar sua corrida. Tente novamente.", "error");
+        }
     });
 
     dom.cancelButton.addEventListener('click', () => {
-        switchPanel('ride-request-panel');
         clearFieldsAndMap();
+        const panel = dom.collapsiblePanel;
+        if (panel && panel.classList.contains('open')) {
+            dom.togglePanelButton.click();
+        }
+        showPage('page1'); // Volta para a página inicial do painel
     });
 
     dom.destinationInput.addEventListener('focus', (e) => {
@@ -273,7 +313,7 @@ function restoreUIFromState() {
         dom.statusPrice.textContent = `Preço estimado: ${fare}`;
         dom.statusOriginText.textContent = state.currentOrigin.data.display_name;
         dom.statusDestinationText.textContent = state.currentDestination.data.display_name;
-        switchPanel('ride-status-panel');
+        showPage('page5');
     }
 }
 
@@ -367,11 +407,22 @@ async function initializeApp() {
     setupCollapsiblePanel();
     setupPWA();
 
-    // Limpa o estado salvo anteriormente para garantir que não seja restaurado
+    // Desativa a restauração de estado para evitar problemas
     localStorage.removeItem('viaja_appState');
-    loadAppState(); // Agora não fará nada, mas mantemos a chamada por segurança
-
+    loadAppState(); 
+    
     await initializeMapAndLocation(isDark);
+
+    // Verifica se é a primeira visita
+    const hasVisited = localStorage.getItem('hasVisited');
+    if (!hasVisited) {
+        const panel = dom.collapsiblePanel;
+        if (panel && !panel.classList.contains('open')) {
+            dom.togglePanelButton.click();
+        }
+        showPage('page1');
+        localStorage.setItem('hasVisited', 'true');
+    }
 
     // Foca no campo de destino após a inicialização
     dom.destinationInput.focus();

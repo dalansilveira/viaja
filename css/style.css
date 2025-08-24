@@ -860,7 +860,7 @@ body.dark .history-list-item:hover {
     transition: background-color 0.3s, box-shadow 0.3s;
     width: 40px;
     height: 40px;
-    bottom: 10px;
+    bottom: 45px; /* Ajustado para 45px */
     right: 10px;
     padding: 0.5rem;
 }
@@ -887,7 +887,7 @@ body.dark #toggle-location-button:hover {
     z-index: 1000;
     width: 40px;
     height: 40px;
-    bottom: 10px;
+    bottom: 45px; /* Ajustado para 45px */
     left: 10px;
     padding: 0.5rem;
 }

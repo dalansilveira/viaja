@@ -334,14 +334,85 @@
             </div>
             <div id="panel-content" class="p-4 overflow-y-auto">
                 <div id="pagination-container">
-                    <div id="page1" class="page-content active">
-                        <p>Conteúdo da Página 1</p>
+                    <div id="page1" class="page-content active flex flex-col items-center justify-center text-center">
+                        <img src="imgs/logo.webp" alt="Logo Via Já" class="w-24 h-24 mb-4">
+                        <h2 class="text-2xl font-bold mb-2">Bem-vindo ao Via Já!</h2>
+                        <p class="text-gray-500 dark:text-gray-400">Sua jornada começa aqui. Para onde vamos hoje?</p>
                     </div>
                     <div id="page2" class="page-content hidden">
                         <div id="destination-suggestions" class="autocomplete-suggestions"></div>
                     </div>
                     <div id="page3" class="page-content hidden">
-                        <p>Conteúdo da Página 3</p>
+                        <h2 class="text-xl font-bold mb-2 text-center">Selecione o tipo de veículo</h2>
+                        <div id="trip-info" class="text-center text-sm text-gray-500 mb-4">
+                            <p id="estimated-distance-time"></p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button type="button" class="vehicle-button" data-vehicle="Moto">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 motorcycle-icon">
+                                    <path d="M2.5 13.5L4 12c.5-1.5 2-2.5 3.5-2.5H16c1 0 2 .5 2.5 1l.5 1.5c.5.5.5 1.5 0 2l-1 1c-.5.5-1.5 1-2 1H7.5c-1.5 0-3-.5-4-1.5L2.5 13.5zM18.5 18a3 3 0 100-6 3 3 0 000 6zM6 18a3 3 0 100-6 3 3 0 000 6z"/>
+                                </svg>
+                                Moto
+                                <span class="vehicle-price"></span>
+                            </button>
+                            <button type="button" class="vehicle-button" data-vehicle="Carro">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                                    <path d="M10 2l-2 2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-4l-2-2zM4 12h16M4 18h16"></path><circle cx="8" cy="14" r="2"></circle><circle cx="16" cy="14" r="2"></circle>
+                                </svg>
+                                Carro
+                                <span class="vehicle-price"></span>
+                            </button>
+                            <button type="button" class="vehicle-button" data-vehicle="Lotação">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                                    <path d="M18 10l-4-4h-4l-4 4"></path><path d="M18 10v4l-4 4h-4l-4-4v-4"></path><path d="M12 6l-4 4-4-4"></path><path d="M12 18l4-4 4 4"></path><path d="M20 12l-8-8-8 8"></path><path d="M4 12v6l8 4 8-4v-6"></path><line x1="12" y1="18" x2="12" y2="22"></line>
+                                </svg>
+                                Lotação
+                                <span class="vehicle-price"></span>
+                            </button>
+                            <button type="button" class="vehicle-button" data-vehicle="Entrega">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                                    <path d="M2 13.5l1.5-1.5c1-1 2.5-1.5 4-1.5h10c1.5 0 3 1 3.5 2.5l1 1c.5.5.5 1.5 0 2l-1 1c-.5.5-1.5 1-2 1h-10c-1.5 0-3-.5-4-1.5l-1-1.5zM19 18a3 3 0 100-6 3 3 0 000 6zM6 18a3 3 0 100-6 3 3 0 000 6z"/>
+                                </svg>
+                                Entrega
+                                <span class="vehicle-price"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="page4" class="page-content hidden">
+                        <h2 class="text-xl font-bold mb-4 text-center">Confirmar Viagem</h2>
+                        <div class="space-y-2 text-sm">
+                            <p><strong>Distância:</strong> <span id="confirm-distance"></span></p>
+                            <p><strong>Tempo Estimado:</strong> <span id="confirm-time"></span></p>
+                            <p><strong>Veículo:</strong> <span id="confirm-vehicle"></span></p>
+                            <p class="text-lg font-bold"><strong>Valor:</strong> <span id="confirm-fare"></span></p>
+                        </div>
+                        <div class="mt-6 flex flex-col gap-2">
+                            <button id="confirm-ride-button" class="button-submit">Confirmar Corrida</button>
+                            <button id="back-to-vehicles-button" class="button-clear">Voltar</button>
+                        </div>
+                    </div>
+                    <div id="page5" class="page-content hidden">
+                        <div class="flex flex-col items-center">
+                            <div id="loader" class="loader mb-4"></div>
+                            <p id="status-message" class="text-lg font-semibold mb-2 text-center"></p>
+                            <div class="mt-4 text-center text-sm text-gray-500">
+                                <p id="status-distance" class="font-medium mb-2"></p>
+                                <p id="status-price" class="font-medium text-lg text-blue-500"></p>
+                                <p id="status-origin" class="font-medium flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-blue-svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span id="status-origin-text"></span>
+                                </p>
+                                <p id="status-destination" class="font-medium flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span id="status-destination-text"></span>
+                                </p>
+                            </div>
+                            <button id="cancel-button" class="mt-6 button-clear">Cancelar</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -351,70 +422,6 @@
    
  
         <main class="flex-grow flex flex-col justify-start gap-4">
-            <div id="vehicle-selection-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
-                <div class="login-content">
-                    <button id="close-vehicle-selection-modal-button" class="close-modal">&times;</button>
-                    <h2 class="text-xl font-bold mb-2 text-center">Selecione o tipo de veículo</h2>
-                    <div id="trip-info" class="text-center text-sm text-gray-500 mb-4">
-                        <p id="estimated-distance-time"></p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <button type="button" class="vehicle-button" data-vehicle="Moto">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 motorcycle-icon">
-                                <path d="M2.5 13.5L4 12c.5-1.5 2-2.5 3.5-2.5H16c1 0 2 .5 2.5 1l.5 1.5c.5.5.5 1.5 0 2l-1 1c-.5.5-1.5 1-2 1H7.5c-1.5 0-3-.5-4-1.5L2.5 13.5zM18.5 18a3 3 0 100-6 3 3 0 000 6zM6 18a3 3 0 100-6 3 3 0 000 6z"/>
-                            </svg>
-                            Moto
-                            <span class="vehicle-price"></span>
-                        </button>
-                        <button type="button" class="vehicle-button" data-vehicle="Carro">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
-                                <path d="M10 2l-2 2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-4l-2-2zM4 12h16M4 18h16"></path><circle cx="8" cy="14" r="2"></circle><circle cx="16" cy="14" r="2"></circle>
-                            </svg>
-                            Carro
-                            <span class="vehicle-price"></span>
-                        </button>
-                        <button type="button" class="vehicle-button" data-vehicle="Lotação">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
-                                <path d="M18 10l-4-4h-4l-4 4"></path><path d="M18 10v4l-4 4h-4l-4-4v-4"></path><path d="M12 6l-4 4-4-4"></path><path d="M12 18l4-4 4 4"></path><path d="M20 12l-8-8-8 8"></path><path d="M4 12v6l8 4 8-4v-6"></path><line x1="12" y1="18" x2="12" y2="22"></line>
-                            </svg>
-                            Lotação
-                            <span class="vehicle-price"></span>
-                        </button>
-                        <button type="button" class="vehicle-button" data-vehicle="Entrega">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
-                                <path d="M2 13.5l1.5-1.5c1-1 2.5-1.5 4-1.5h10c1.5 0 3 1 3.5 2.5l1 1c.5.5.5 1.5 0 2l-1 1c-.5.5-1.5 1-2 1h-10c-1.5 0-3-.5-4-1.5l-1-1.5zM19 18a3 3 0 100-6 3 3 0 000 6zM6 18a3 3 0 100-6 3 3 0 000 6z"/>
-                            </svg>
-                            Entrega
-                            <span class="vehicle-price"></span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div id="ride-status-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
-                <div class="login-content">
-                    <div class="flex flex-col items-center">
-                        <div id="loader" class="loader mb-4"></div>
-                        <p id="status-message" class="text-lg font-semibold mb-2 text-center"></p>
-                        <div class="mt-4 text-center text-sm text-gray-500">
-                            <p id="status-distance" class="font-medium mb-2"></p>
-                            <p id="status-price" class="font-medium text-lg text-blue-500"></p>
-                            <p id="status-origin" class="font-medium flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-blue-svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                                </svg>
-                                <span id="status-origin-text"></span>
-                            </p>
-                            <p id="status-destination" class="font-medium flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pin-green-svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-                                </svg>
-                                <span id="status-destination-text"></span>
-                            </p>
-                        </div>
-                        <button id="cancel-button" class="mt-6 button-clear">Cancelar</button>
-                    </div>
-                </div>
-            </div>
         </main>
         <footer class="mt-auto py-4 text-center text-xs text-gray-500 select-none">
            Via Já - Todos os Direitos Reservados ®

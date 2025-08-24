@@ -1,6 +1,6 @@
 import * as state from './state.js';
 import { dom } from './dom.js';
-import { handleMapClick, showPushNotification } from './ui.js';
+import { handleMapClick, showPushNotification, showPage } from './ui.js';
 import { formatTime, estimateFare, formatPlaceForDisplay } from './utils.js';
 import { reverseGeocode, getLocationByIP } from './api.js';
 
@@ -252,6 +252,13 @@ export function traceRoute(fitBounds = false) {
         // Exibe o botão de solicitar corrida
         dom.goButton.classList.remove('hidden');
         dom.destinationInput.classList.remove('rounded-r-lg');
+
+        // Abre o painel na página 3 para seleção de veículo
+        const panel = dom.collapsiblePanel;
+        if (panel && !panel.classList.contains('open')) {
+            dom.togglePanelButton.click();
+        }
+        showPage('page3');
     });
 
     state.setRouteControl(control);

@@ -207,3 +207,63 @@ export async function migrateSuggestionCache() {
         console.error("Erro durante a migração do cache de sugestões:", error);
     }
 }
+
+/**
+ * Salva uma corrida confirmada no Firestore.
+ * @param {object} rideData - Um objeto contendo todos os dados da viagem.
+ * @returns {Promise<string|null>} O ID da corrida salva ou nulo em caso de erro.
+ */
+export async function saveRide(rideData) {
+    if (!rideData || !rideData.userId) {
+        console.error("Dados da corrida ou ID do usuário ausentes.");
+        return null;
+    }
+
+    try {
+        const ridesRef = collection(db, "viaja1", "dados", "corridas");
+        const newRideRef = doc(ridesRef); // Cria uma referência com ID automático
+
+        await setDoc(newRideRef, {
+            ...rideData,
+            id: newRideRef.id, // Salva o próprio ID do documento
+            status: 'pending', // Status inicial da corrida
+            createdAt: serverTimestamp()
+        });
+
+        console.log("Corrida salva com sucesso:", newRideRef.id);
+        return newRideRef.id;
+    } catch (error) {
+        console.error("Erro ao salvar a corrida:", error);
+        return null;
+    }
+}
+
+/**
+ * Busca por uma corrida em andamento para um determinado usuário.
+ * @param {string} userId - O ID do usuário.
+ * @returns {Promise<object|null>} Os dados da corrida em andamento ou nulo se não houver.
+ */
+export async function getOngoingRide(userId) {
+    if (!userId) return null;
+
+    const ridesRef = collection(db, "viaja1", "dados", "corridas");
+    const q = query(
+        ridesRef,
+        where("userId", "==", userId),
+        where("status", "==", "pending"),
+        limit(1)
+    );
+
+    try {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const rideData = querySnapshot.docs[0].data();
+            console.log("Corrida em andamento encontrada:", rideData);
+            return rideData;
+        }
+        return null;
+    } catch (error) {
+        console.error("Erro ao buscar corrida em andamento:", error);
+        return null;
+    }
+}
