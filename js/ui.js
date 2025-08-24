@@ -1,3 +1,4 @@
+import { requestRide } from './app.js';
 import { dom } from './dom.js';
 import * as state from './state.js';
 import { saveAppState } from './state.js';
@@ -395,7 +396,7 @@ function setDestination(place, inputEl, suggestionsEl) {
     saveAppState();
     traceRoute();
     if (state.currentOrigin && state.currentDestination) {
-        dom.goButton.classList.remove('hidden');
+        requestRide();
     }
 
     refreshMap();

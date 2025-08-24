@@ -156,7 +156,6 @@ export function traceRoute(fitBounds = false) {
         state.setRouteControl(null);
     }
     dom.routeInfoDisplay.classList.add('hidden');
-    dom.goButton.classList.add('hidden');
     dom.destinationInput.classList.add('rounded-r-lg');
 
     // Remove os círculos de início e fim existentes
@@ -249,10 +248,6 @@ export function traceRoute(fitBounds = false) {
             state.map.fitBounds(route.coordinates, { padding: [50, 50] });
         }
 
-        // Exibe o botão de solicitar corrida
-        dom.goButton.classList.remove('hidden');
-        dom.destinationInput.classList.remove('rounded-r-lg');
-
         // Abre o painel na página 3 para seleção de veículo
         const panel = dom.collapsiblePanel;
         if (panel && !panel.classList.contains('open')) {
@@ -285,7 +280,7 @@ export function startLocationTracking() {
         fullAddressData.display_name = addressText;
         state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
 
-        state.map.panTo(newLatLng);
+        state.map.setView(newLatLng, 13);
     };
 
     const watchId = navigator.geolocation.watchPosition(

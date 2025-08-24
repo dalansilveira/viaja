@@ -75,7 +75,7 @@ function handleCurrentLocation() {
     }
 }
 
-function requestRide() {
+export function requestRide() {
     if (state.currentOrigin && state.currentDestination) {
         // Salva o destino primário no histórico ao solicitar a corrida
         if (state.currentDestination.data) {
@@ -104,8 +104,6 @@ function setupAppEventListeners() {
         toggleGpsModal(false);
         // Opcional: pode adicionar alguma lógica aqui se o usuário cancelar
     });
-
-    dom.goButton.addEventListener('click', requestRide);
 
     dom.vehicleButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -356,13 +354,7 @@ async function initializeMapAndLocation(isDark) {
     let initialCoords = null;
     let initialZoom = 2;
 
-    // 1. Tenta obter as coordenadas do estado salvo
-    if (state.currentOrigin) {
-        initialCoords = state.currentOrigin.latlng;
-        initialZoom = 13;
-    }
-
-    // 2. Se não houver estado salvo, tenta obter a localização por IP como um fallback rápido
+    // 1. Se não houver estado salvo, tenta obter a localização por IP como um fallback rápido
     if (!initialCoords) {
         try {
             const ipLocation = await getLocationByIP();
@@ -382,11 +374,6 @@ async function initializeMapAndLocation(isDark) {
 
     // 4. Inicializa o mapa com as melhores coordenadas encontradas
     initializeMap(initialCoords.lat, initialCoords.lng, initialZoom, isDark);
-
-    // 5. Se havia um estado salvo, restaura a UI completa
-    if (state.currentOrigin) {
-        restoreUIFromState();
-    }
 
     // 6. SEMPRE tenta iniciar o rastreamento de localização por padrão, se disponível
     if (navigator.geolocation) {
@@ -409,7 +396,6 @@ async function initializeApp() {
 
     // Desativa a restauração de estado para evitar problemas
     localStorage.removeItem('viaja_appState');
-    loadAppState(); 
     
     await initializeMapAndLocation(isDark);
 
