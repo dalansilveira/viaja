@@ -3,10 +3,11 @@ import { dom } from './dom.js';
 import * as state from './state.js';
 import { saveAppState } from './state.js';
 import { reverseGeocode, fetchAddressSuggestions } from './api.js';
-import { formatPlaceForDisplay, haversineDistance } from './utils.js';
+import { formatPlaceForDisplay, haversineDistance, normalizeText } from './utils.js';
 import { addOrMoveMarker, traceRoute } from './map.js';
 import { saveDestinationToHistory } from './history.js';
-import { saveSuggestionToCache } from './firestore.js';
+import { saveSuggestionToCache, getHistory, getFavorites } from './firestore.js';
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 let mapMessageTimeout;
 
@@ -188,30 +189,10 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
         return;
     }
 
-    //const prefixes = ['rua', 'av', 'av.', 'avenida', 'praça'];
-
-
-    // Array com os prefixos de endereço
     const prefixes = [
-        'Rua',
-        'R.',
-        'Avenida',
-        'Av.',
-        'Praça',
-        'Pç.',
-        'Travessa',
-        'Tr.',
-        'Estrada',
-        'Estr.',
-        'Rodovia',
-        'Rod.',
-        'Alameda',
-        'Al.',
-        'Largo',
-        'Viela',
-        'Via',
-        'Trevo',
-        'Passarela'
+        'Rua', 'R.', 'Avenida', 'Av.', 'Praça', 'Pç.', 'Travessa', 'Tr.',
+        'Estrada', 'Estr.', 'Rodovia', 'Rod.', 'Alameda', 'Al.', 'Largo',
+        'Viela', 'Via', 'Trevo', 'Passarela'
     ];
 
     const cleanedQuery = prefixes.reduce((acc, prefix) => {
@@ -219,76 +200,76 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
         return acc.replace(regex, '');
     }, query);
 
-    // 1. Tenta "adivinhar" com base no histórico/favoritos
-    const history = JSON.parse(localStorage.getItem('viaja_destination_history')) || [];
-    const favorites = JSON.parse(localStorage.getItem('viaja_favorite_destinations')) || [];
-    const combinedLocal = [...favorites, ...history];
-    
-    const bestGuess = combinedLocal.find(place => 
-        place.display_name.toLowerCase().startsWith(query)
-    );
-
-    // Usa a "adivinhação" como a query principal se encontrada, senão usa a query original
-    const searchQuery = bestGuess ? bestGuess.display_name : cleanedQuery;
-
-    // 2. Coleta os resultados da API com a query refinada
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
     const proximityCoords = state.currentUserCoords || null;
+
     try {
-        const apiResults = await fetchAddressSuggestions(searchQuery, proximityCoords, signal);
-        if (signal.aborted) return; // Não faz nada se a requisição foi abortada
+        // 1. Coletar todas as fontes de dados em paralelo
+        const [history, favorites, apiResults] = await Promise.all([
+            userId ? getHistory(userId) : Promise.resolve([]),
+            userId ? getFavorites(userId) : Promise.resolve([]),
+            fetchAddressSuggestions(cleanedQuery, proximityCoords, signal)
+        ]);
 
-    // Combina e remove duplicatas (a busca da API já é a principal fonte)
-    const uniqueResults = Array.from(new Map(apiResults.map(item => [item.place_id || `${item.lat},${item.lon}`, item])).values());
+        if (signal.aborted) return;
 
-    // 3. Ordenar por distância se a localização do usuário for conhecida
-    if (proximityCoords) {
-        uniqueResults.sort((a, b) => {
-            const distA = haversineDistance(proximityCoords, a);
-            const distB = haversineDistance(proximityCoords, b);
-            return distA - distB;
-        });
-    }
+        // 2. Unificar todos os resultados em uma única lista
+        const combinedResults = [...favorites, ...history, ...apiResults];
 
-    // 4. Limitar ao máximo de 6 resultados e filtrar por resultados que contenham uma rua
-    const finalResults = uniqueResults.filter(place => place.address && place.address.road).slice(0, 6);
+        // 3. Remover duplicatas da lista unificada usando uma chave composta (rua + bairro)
+        const uniqueResults = Array.from(new Map(combinedResults.map(item => {
+            const road = item.address?.road || '';
+            const suburb = item.address?.suburb || '';
+            const key = `${normalizeText(road)}-${normalizeText(suburb)}`;
+            return [key, item];
+        })).values());
 
-    // 5. Renderizar apenas se houver resultados
-    loadingIndicator.style.display = 'none';
-    if (finalResults.length > 0) {
-        // Adiciona o cabeçalho
-        const header = document.createElement('div');
-        header.className = 'suggestion-header';
-        header.textContent = 'Selecione um endereço';
-        suggestionsEl.appendChild(header);
-
-        // Renderiza cada item e salva no cache
-        finalResults.forEach(place => {
-            const isFavorite = favorites.some(fav => fav.place_id === place.place_id);
-            const isHistory = history.some(hist => hist.place_id === place.place_id);
-            let iconType = 'location';
-            if (isFavorite) iconType = 'favorite';
-            else if (isHistory) iconType = 'history';
-            
-            renderSuggestion(place, place.display_name, inputEl, suggestionsEl, iconType, userTypedNumber);
-            
-            // Salva no cache se for da mesma cidade do usuário
-            if (state.currentOrigin && state.currentOrigin.data.address.city && place.address.city && place.address.city.toLowerCase() === state.currentOrigin.data.address.city.toLowerCase()) {
-                saveSuggestionToCache(place);
-            }
-        });
-
-        // Se houver resultados e nenhum destino estiver selecionado, abra o painel na página 2
-        if (!state.currentDestination) {
-            const panel = dom.collapsiblePanel;
-            if (panel && !panel.classList.contains('open')) {
-                dom.togglePanelButton.click(); // Simula o clique para abrir o painel
-            }
-            showPage('page2');
+        // 4. Ordenar por distância se a localização do usuário for conhecida
+        if (proximityCoords) {
+            uniqueResults.sort((a, b) => {
+                const distA = haversineDistance(proximityCoords, a);
+                const distB = haversineDistance(proximityCoords, b);
+                return distA - distB;
+            });
         }
-        suggestionsEl.style.display = 'block';
-    } else {
-        suggestionsEl.style.display = 'none';
-    }
+
+        // 5. Filtrar por resultados que contenham uma rua e limitar ao máximo de 6
+        const finalResults = uniqueResults.filter(place => place.address && place.address.road).slice(0, 6);
+
+        // 6. Renderizar os resultados
+        loadingIndicator.style.display = 'none';
+        if (finalResults.length > 0) {
+            const header = document.createElement('div');
+            header.className = 'suggestion-header';
+            header.textContent = 'Selecione um endereço';
+            suggestionsEl.appendChild(header);
+
+            finalResults.forEach(place => {
+                const isFavorite = favorites.some(fav => fav.place_id === place.place_id);
+                const isHistory = history.some(hist => hist.place_id === place.place_id);
+                let iconType = 'location';
+                if (isFavorite) iconType = 'favorite';
+                else if (isHistory) iconType = 'history';
+
+                renderSuggestion(place, place.display_name, inputEl, suggestionsEl, iconType, userTypedNumber);
+
+                if (userId && state.currentOrigin?.data?.address?.city && place.address?.city?.toLowerCase() === state.currentOrigin.data.address.city.toLowerCase()) {
+                    saveSuggestionToCache(place);
+                }
+            });
+
+            if (!state.currentDestination) {
+                const panel = dom.collapsiblePanel;
+                if (panel && !panel.classList.contains('open')) {
+                    dom.togglePanelButton.click();
+                }
+                showPage('page2');
+            }
+            suggestionsEl.style.display = 'block';
+        } else {
+            suggestionsEl.style.display = 'none';
+        }
     } catch (error) {
         if (error.name !== 'AbortError') {
             console.error("Erro ao buscar sugestões de endereço:", error);

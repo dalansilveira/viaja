@@ -10,7 +10,7 @@ import { setupAuthEventListeners } from './auth.js';
 import { querySuggestionCache, saveRide, getOngoingRide, updateRideStatus } from './firestore.js';
 import { setupPWA } from './pwa.js';
 import { auth } from './firebase-config.js';
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { onAuthStateChanged, getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 function clearFieldsAndMap() {
     // 1. Limpar estado e marcador de destino
@@ -77,11 +77,6 @@ function handleCurrentLocation() {
 
 export function requestRide() {
     if (state.currentOrigin && state.currentDestination) {
-        // Salva o destino primário no histórico ao solicitar a corrida
-        if (state.currentDestination.data) {
-            saveDestinationToHistory(state.currentDestination.data);
-        }
-        
         // Abre o painel na página 3
         const panel = dom.collapsiblePanel;
         if (panel && !panel.classList.contains('open')) {
@@ -131,7 +126,8 @@ function setupAppEventListeners() {
     });
 
     document.getElementById('confirm-ride-button').addEventListener('click', async () => {
-        const userId = localStorage.getItem('user_uid');
+        const auth = getAuth();
+        const userId = auth.currentUser?.uid;
         if (!userId) {
             showPushNotification("Você precisa estar logado para solicitar uma corrida.", "error");
             return;
@@ -147,6 +143,29 @@ function setupAppEventListeners() {
         const rideId = await saveRide(rideData);
 
         if (rideId) {
+            // Salva o destino no histórico APÓS a corrida ser confirmada e salva
+            if (state.currentDestination.data) {
+                // Cria um objeto "limpo" para o histórico, evitando referências circulares
+                const place = state.currentDestination.data;
+                const historyEntry = {
+                    place_id: place.place_id || `${place.lat},${place.lon}`,
+                    display_name: place.display_name,
+                    lat: place.lat,
+                    lon: place.lon,
+                    address: {
+                        road: place.address.road || '',
+                        suburb: place.address.suburb || '',
+                        city: place.address.city || '',
+                        state: place.address.state || '',
+                        postcode: place.address.postcode || '',
+                        country: place.address.country || '',
+                        house_number: place.address.house_number || ''
+                    }
+                };
+                console.log("Tentando salvar no histórico:", historyEntry);
+                saveDestinationToHistory(historyEntry);
+            }
+            
             // Lógica para iniciar a busca pela corrida
             dom.statusMessage.textContent = `Procurando ${state.tripData.vehicle} disponível...`;
             dom.statusDistance.textContent = `Distância: ${state.tripData.distance.toFixed(2)} km | Tempo: ${formatTime(state.tripData.time)}`;
@@ -166,7 +185,8 @@ function setupAppEventListeners() {
     });
 
     dom.cancelButton.addEventListener('click', async () => {
-        const userId = localStorage.getItem('user_uid');
+        const auth = getAuth();
+        const userId = auth.currentUser?.uid;
         if (userId) {
             const ongoingRide = await getOngoingRide(userId);
             if (ongoingRide && ongoingRide.id) {
@@ -188,9 +208,19 @@ function setupAppEventListeners() {
     });
 
     dom.destinationInput.addEventListener('focus', (e) => {
+        dom.autocompleteGhost.style.display = 'block';
         // Passa um AbortSignal vazio para a primeira chamada no focus
         const abortController = new AbortController();
         displayAddressSuggestions(e.target, dom.destinationSuggestions, abortController.signal);
+    });
+
+    dom.destinationInput.addEventListener('blur', () => {
+        // Usa um pequeno atraso para garantir que o evento 'mousedown' no fantasma possa ser acionado
+        // antes que o elemento seja ocultado. O e.preventDefault() no mousedown deve prevenir o blur,
+        // mas isso funciona como uma camada extra de segurança.
+        setTimeout(() => {
+            dom.autocompleteGhost.style.display = 'none';
+        }, 150);
     });
 
     let currentAbortController;
@@ -235,6 +265,30 @@ function setupAppEventListeners() {
             dom.destinationInput.closest('.input-group').classList.remove('input-filled');
         }
     }, 300));
+
+    const handleGhostTextCompletion = (e) => {
+        console.log(`Evento '${e.type}' disparado no texto fantasma.`);
+        // Previne o comportamento padrão (como perder o foco do input)
+        e.preventDefault();
+        
+        if (currentInlineSuggestion) {
+            dom.destinationInput.value = currentInlineSuggestion;
+            dom.autocompleteGhost.value = '';
+            const finalValue = currentInlineSuggestion;
+            currentInlineSuggestion = null;
+
+            // Dispara a busca de sugestões com o valor completo
+            const abortController = new AbortController();
+            displayAddressSuggestions(dom.destinationInput, dom.destinationSuggestions, abortController.signal);
+            
+            // Foca no input e move o cursor para o final
+            dom.destinationInput.focus();
+            dom.destinationInput.setSelectionRange(finalValue.length, finalValue.length);
+        }
+    };
+
+    dom.autocompleteGhost.addEventListener('mousedown', handleGhostTextCompletion);
+    dom.autocompleteGhost.addEventListener('touchstart', handleGhostTextCompletion);
 
     dom.destinationInput.addEventListener('keydown', (e) => {
         // Usa a sugestão completa armazenada ao invés do valor do "fantasma"

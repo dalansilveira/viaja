@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp, limit, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { normalizeText } from './utils.js';
 
 /**
@@ -79,8 +79,9 @@ export async function updateRideStatus(rideId, newStatus) {
  * @param {object} place - O objeto de local da API de geocodificação.
  */
 export async function saveSuggestionToCache(place) {
-    if (!place || !place.address || !place.address.road || !place.address.city) {
-        return; // Não salva se os dados essenciais estiverem faltando
+    // Se o objetivo é apenas um índice de nomes de ruas, a rua é o único campo obrigatório.
+    if (!place || !place.address || !place.address.road) {
+        return;
     }
 
     const { road, suburb, city, state } = place.address;
@@ -88,29 +89,33 @@ export async function saveSuggestionToCache(place) {
 
     const suggestionsRef = collection(db, "viaja1", "dados", "sugestoes_cache");
     
-    // Verifica se já existe uma sugestão idêntica (usando texto normalizado)
+    // Verifica se uma rua com o mesmo nome normalizado já existe no cache.
+    // A verificação de cidade e bairro foi removida conforme a solicitação.
     const q = query(suggestionsRef, 
-        where("rua_lowercase", "==", normalizeText(road)),
-        where("cidade", "==", city)
+        where("rua_lowercase", "==", normalizeText(road))
     );
 
     try {
         const querySnapshot = await getDocs(q);
+        // Salva apenas se não encontrar nenhuma entrada com o mesmo nome de rua.
         if (querySnapshot.empty) {
-            // Se não houver duplicatas, adiciona o novo documento com um ID automático
             const newSuggestionRef = doc(suggestionsRef);
             await setDoc(newSuggestionRef, {
-                id: newSuggestionRef.id, // Salva o próprio ID do documento
+                id: newSuggestionRef.id,
                 rua: road,
-                rua_lowercase: normalizeText(road), // Campo para busca normalizada
+                rua_lowercase: normalizeText(road),
+                // Os outros dados ainda são salvos para uso posterior, se necessário.
                 bairro: suburb || '',
-                cidade: city,
+                cidade: city || '',
                 uf: state || '',
                 lat: lat,
                 lng: lon,
                 createdAt: serverTimestamp()
             });
-            console.log("Sugestão salva no cache global:", place.display_name);
+            console.log("Nova rua salva no cache:", road);
+        } else {
+            // Opcional: log para indicar que a duplicata foi encontrada e ignorada.
+            console.log(`Rua duplicada encontrada no cache, não será salva: "${road}"`);
         }
     } catch (error) {
         console.error("Erro ao salvar sugestão no cache:", error);
@@ -243,16 +248,32 @@ export async function saveRide(rideData) {
         return null;
     }
 
+    // Cria um objeto "limpo" para o Firestore, evitando referências circulares.
+    const cleanRideData = {
+        userId: rideData.userId,
+        origin: {
+            lat: rideData.origin.latlng.lat,
+            lng: rideData.origin.latlng.lng,
+            address: rideData.origin.data.display_name || ''
+        },
+        destination: {
+            lat: rideData.destination.latlng.lat,
+            lng: rideData.destination.latlng.lng,
+            address: rideData.destination.data.display_name || ''
+        },
+        trip: rideData.trip, // tripData já é um objeto limpo
+        status: 'pending',
+        createdAt: serverTimestamp()
+    };
+
     try {
         const ridesRef = collection(db, "viaja1", "dados", "corridas");
-        const newRideRef = doc(ridesRef); // Cria uma referência com ID automático
+        const newRideRef = doc(ridesRef);
+        
+        // Adiciona o ID gerado ao objeto antes de salvar
+        cleanRideData.id = newRideRef.id;
 
-        await setDoc(newRideRef, {
-            ...rideData,
-            id: newRideRef.id, // Salva o próprio ID do documento
-            status: 'pending', // Status inicial da corrida
-            createdAt: serverTimestamp()
-        });
+        await setDoc(newRideRef, cleanRideData);
 
         console.log("Corrida salva com sucesso:", newRideRef.id);
         return newRideRef.id;
@@ -289,5 +310,98 @@ export async function getOngoingRide(userId) {
     } catch (error) {
         console.error("Erro ao buscar corrida em andamento:", error);
         return null;
+    }
+}
+
+// --- Funções para Histórico e Favoritos ---
+
+/**
+ * Adiciona um local ao histórico de um usuário no Firestore.
+ * @param {string} userId - O ID do usuário.
+ * @param {object} place - O objeto do local a ser salvo.
+ */
+export async function addHistory(userId, place) {
+    // Usa uma combinação de lat/lng como ID único, já que place_id pode não existir.
+    const placeId = place.place_id || `${place.lat},${place.lon}`;
+    if (!userId || !place) return;
+    
+    try {
+        const historyRef = doc(db, "viaja1", "dados", "users", userId, "history", placeId);
+        await setDoc(historyRef, {
+            ...place,
+            id: placeId, // Garante que o ID esteja no documento
+            savedAt: serverTimestamp()
+        }, { merge: true });
+    } catch (error) {
+        console.error("Erro ao salvar no histórico do Firestore:", error);
+    }
+}
+
+/**
+ * Busca o histórico de um usuário no Firestore.
+ * @param {string} userId - O ID do usuário.
+ * @returns {Promise<Array>} Uma lista de locais do histórico.
+ */
+export async function getHistory(userId) {
+    if (!userId) return [];
+    try {
+        const historyCol = collection(db, "viaja1", "dados", "users", userId, "history");
+        const q = query(historyCol, orderBy("savedAt", "desc"), limit(20)); // Pega os 20 mais recentes
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data());
+    } catch (error) {
+        console.error("Erro ao buscar histórico do Firestore:", error);
+        return [];
+    }
+}
+
+/**
+ * Adiciona um local aos favoritos de um usuário no Firestore.
+ * @param {string} userId - O ID do usuário.
+ * @param {object} place - O objeto do local a ser salvo.
+ */
+export async function addFavorite(userId, place) {
+    if (!userId || !place || !place.place_id) return;
+    try {
+        const favoriteRef = doc(db, "viaja1", "dados", "users", userId, "favorites", place.place_id.toString());
+        await setDoc(favoriteRef, {
+            ...place,
+            savedAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Erro ao salvar favorito no Firestore:", error);
+    }
+}
+
+/**
+ * Remove um local dos favoritos de um usuário no Firestore.
+ * @param {string} userId - O ID do usuário.
+ * @param {string} placeId - O ID do local a ser removido.
+ */
+export async function removeFavorite(userId, placeId) {
+    if (!userId || !placeId) return;
+    try {
+        const favoriteRef = doc(db, "viaja1", "dados", "users", userId, "favorites", placeId.toString());
+        await deleteDoc(favoriteRef);
+    } catch (error) {
+        console.error("Erro ao remover favorito do Firestore:", error);
+    }
+}
+
+/**
+ * Busca os favoritos de um usuário no Firestore.
+ * @param {string} userId - O ID do usuário.
+ * @returns {Promise<Array>} Uma lista de locais favoritos.
+ */
+export async function getFavorites(userId) {
+    if (!userId) return [];
+    try {
+        const favoritesCol = collection(db, "viaja1", "dados", "users", userId, "favorites");
+        const q = query(favoritesCol, orderBy("savedAt", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => doc.data());
+    } catch (error) {
+        console.error("Erro ao buscar favoritos do Firestore:", error);
+        return [];
     }
 }

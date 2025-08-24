@@ -950,6 +950,11 @@ body.dark #toggle-location-button:hover {
 }
 
 /* Estilos para o painel recolhível */
+#panel-container {
+    background-color: var(--bg-panel);
+    transition: background-color 0.5s ease; /* Adiciona transição suave de cor com o tema */
+}
+
 #collapsible-panel {
     height: 32px; /* Altura inicial apenas para a alça */
     overflow: hidden;
@@ -988,8 +993,8 @@ body.dark #toggle-location-button:hover {
     color: var(--text-muted);
     background-color: transparent;
     border: 1px solid transparent;
-    pointer-events: none;
-    z-index: 1;
+    pointer-events: auto;
+    z-index: 2;
     /* Garante que as propriedades de fonte sejam idênticas */
     font-family: inherit;
     font-size: inherit;
@@ -1001,6 +1006,6 @@ body.dark #toggle-location-button:hover {
 
 #destination-input {
     position: relative;
-    z-index: 2; /* Garante que o texto digitado fique sobre o fantasma */
+    z-index: 1; /* Garante que o texto digitado fique sobre o fantasma */
     background-color: transparent; /* Garante que o fantasma seja visível por trás */
 }

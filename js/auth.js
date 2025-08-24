@@ -99,22 +99,24 @@ export function setupAuthEventListeners() {
         dom.authMenu.classList.add('hidden');
     });
 
-    dom.authMenuHistory.addEventListener('click', (e) => {
+    dom.authMenuHistory.addEventListener('click', async (e) => {
         e.preventDefault();
-        renderRideHistory();
-        dom.historyModal.classList.remove('hidden');
         dom.authMenu.classList.add('hidden');
+        // Mostra um indicador de carregamento ou similar, se houver
+        dom.historyModal.classList.remove('hidden');
+        // Aguarda a renderização dos dados antes de finalizar
+        await renderRideHistory();
     });
 
     dom.closeHistoryModalButton.addEventListener('click', () => {
         dom.historyModal.classList.add('hidden');
     });
 
-    dom.authMenuFavorites.addEventListener('click', (e) => {
+    dom.authMenuFavorites.addEventListener('click', async (e) => {
         e.preventDefault();
-        renderFavoritesList();
-        dom.favoritesModal.classList.remove('hidden');
         dom.authMenu.classList.add('hidden');
+        dom.favoritesModal.classList.remove('hidden');
+        await renderFavoritesList();
     });
 
     dom.closeFavoritesModalButton.addEventListener('click', () => {

@@ -2,81 +2,58 @@ import { dom } from './dom.js';
 import * as state from './state.js';
 import { addOrMoveMarker, traceRoute } from './map.js';
 import { refreshMap } from './ui.js';
-
-const HISTORY_STORAGE_KEY = 'viaja_destination_history';
-const FAVORITES_STORAGE_KEY = 'viaja_favorite_destinations';
-let showFavoritesOnly = false; // Novo estado para controlar a exibição
+import { addHistory, getHistory, addFavorite, removeFavorite, getFavorites } from './firestore.js';
 
 /**
- * Salva um local de destino no histórico.
+ * Salva um local de destino no histórico do Firestore.
  * @param {object} place - O objeto de local da API.
  */
-export function saveDestinationToHistory(place) {
-    if (!place || !place.place_id) return;
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    // Adiciona o número do campo de input ao objeto do local antes de salvar
-
-    let history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
-    history = history.filter(item => item.place_id !== place.place_id);
-    history.unshift(place);
-    const shortHistory = history.slice(0, 5);
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(shortHistory));
-    renderHistoryList();
+export async function saveDestinationToHistory(place) {
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
+    console.log(`saveDestinationToHistory chamado com userId: ${userId}`, place);
+    if (!userId || !place) {
+        console.error("Condição para salvar histórico não atendida (usuário ou local ausente).", { userId, place });
+        return;
+    }
+    await addHistory(userId, place);
 }
 
 /**
- * Adiciona ou remove um local dos favoritos.
+ * Adiciona ou remove um local dos favoritos no Firestore.
  * @param {object} place - O objeto de local a ser favoritado/desfavoritado.
  */
-export function toggleFavorite(place) {
-    if (!place || !place.place_id) return;
+export async function toggleFavorite(place) {
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
+    if (!userId || !place || !place.place_id) return;
 
-    let favorites = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY)) || [];
+    const favorites = await getFavorites(userId);
     const isFavorite = favorites.some(item => item.place_id === place.place_id);
 
     if (isFavorite) {
-        showConfirmationModal(`Tem certeza de que deseja remover "${place.display_name}" dos favoritos?`, () => {
-            favorites = favorites.filter(item => item.place_id !== place.place_id);
-            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
-            renderHistoryList();
+        showConfirmationModal(`Tem certeza de que deseja remover "${place.display_name}" dos favoritos?`, async () => {
+            await removeFavorite(userId, place.place_id);
+            renderFavoritesList(); // Atualiza a lista de favoritos
+            renderRideHistory(); // Atualiza o histórico também, pois o status de favorito pode ter mudado
         });
     } else {
-        if (favorites.length < 5) { // Limita a 5 favoritos
-            favorites.push(place);
-            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
-            renderHistoryList(); // Atualiza a exibição para refletir a mudança
-        } else {
-            // Opcional: Notificar o usuário que o limite foi atingido
-            console.warn('Limite de 5 favoritos atingido.');
-        }
+        await addFavorite(userId, place);
+        renderFavoritesList();
+        renderRideHistory();
     }
 }
 
 /**
- * Remove um item do histórico.
- * @param {string} placeId - O ID do local a ser removido.
- */
-export function deleteHistoryItem(placeId) {
-    let history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
-    const itemToDelete = history.find(item => item.place_id === placeId);
-    if (!itemToDelete) return;
-
-    showConfirmationModal(`Tem certeza de que deseja remover "${itemToDelete.display_name}" do histórico?`, () => {
-        history = history.filter(item => item.place_id !== placeId);
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-        renderHistoryList(); // Atualiza a exibição
-    });
-}
-
-/**
- * Alterna a exibição entre histórico completo e apenas favoritos.
- * @param {boolean} showFavorites - Se deve exibir apenas favoritos.
- */
-
-/**
  * Renderiza a lista de histórico/favoritos na UI.
+ * @param {HTMLElement} container - O elemento container para a lista.
+ * @param {Array} items - Os itens a serem renderizados.
+ * @param {boolean} isFavorites - Indica se a lista é de favoritos.
+ * @param {Array} favoritesList - A lista completa de favoritos para verificação.
  */
-function renderList(container, items, isFavorites) {
+function renderList(container, items, isFavorites, favoritesList = []) {
     container.innerHTML = '';
     if (items.length === 0) {
         container.innerHTML = `<p class="text-center text-sm text-gray-500 dark:text-gray-400 p-4">Nenhum item encontrado.</p>`;
@@ -84,8 +61,7 @@ function renderList(container, items, isFavorites) {
     }
 
     items.forEach(place => {
-        const favorites = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY)) || [];
-        const isFavorite = favorites.some(item => item.place_id === place.place_id);
+        const isFavorite = favoritesList.some(item => item.place_id === place.place_id);
         const historyItem = document.createElement('div');
         historyItem.className = `history-list-item flex items-center justify-between p-2 rounded-md text-sm w-full ${isFavorites ? 'favorite-item' : ''}`;
         historyItem.innerHTML = `
@@ -101,11 +77,11 @@ function renderList(container, items, isFavorites) {
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.8-2.034a1 1 0 00-1.176 0l-2.8 2.034c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.927 8.72c-.783-.57-.381-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
                     </svg>
                 </button>
-                <button type="button" class="delete-button p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" data-place-id="${place.place_id}">
+                ${isFavorites ? `<button type="button" class="delete-button p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" data-place-id="${place.place_id}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clip-rule="evenodd" />
                     </svg>
-                </button>
+                </button>` : ''}
             </div>
         `;
         historyItem.querySelector('button[data-place-id]').addEventListener('click', () => handleHistorySelection(place));
@@ -113,27 +89,37 @@ function renderList(container, items, isFavorites) {
             e.stopPropagation();
             toggleFavorite(place);
         });
-        historyItem.querySelector('.delete-button').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (isFavorites) {
-                toggleFavorite(place);
-            } else {
-                deleteHistoryItem(place.place_id);
-            }
-        });
+        const deleteBtn = historyItem.querySelector('.delete-button');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFavorite(place); // A ação de deletar um favorito é a mesma que desfavoritar
+            });
+        }
         container.appendChild(historyItem);
     });
 }
 
-
-export function renderRideHistory() {
-    const history = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY)) || [];
-    renderList(dom.rideHistoryList, history, false);
+export async function renderRideHistory() {
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+        renderList(dom.rideHistoryList, [], false, []);
+        return;
+    }
+    const [history, favorites] = await Promise.all([getHistory(userId), getFavorites(userId)]);
+    renderList(dom.rideHistoryList, history, false, favorites);
 }
 
-export function renderFavoritesList() {
-    const favorites = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY)) || [];
-    renderList(dom.modalFavoritesList, favorites, true);
+export async function renderFavoritesList() {
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+        renderList(dom.modalFavoritesList, [], true, []);
+        return;
+    }
+    const favorites = await getFavorites(userId);
+    renderList(dom.modalFavoritesList, favorites, true, favorites);
 }
 
 /**
