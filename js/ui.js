@@ -517,3 +517,49 @@ export function showPage(pageId) {
         targetPage.classList.add('active');
     }
 }
+
+/**
+ * Configura um listener para o VisualViewport para ajustar a interface quando o teclado virtual aparece.
+ * Isso evita que o painel inferior seja ocultado pelo teclado em dispositivos móveis.
+ */
+function setupViewportListener() {
+    // Verifica se a API VisualViewport é suportada pelo navegador
+    if (window.visualViewport) {
+        const panelContainer = document.getElementById('panel-container');
+        if (!panelContainer) {
+            console.error('Elemento #panel-container não encontrado para o ajuste do viewport.');
+            return;
+        }
+
+        const handleViewportChange = () => {
+            // A altura total da janela interna
+            const windowHeight = window.innerHeight;
+            // A altura da área visível (descontando o teclado, etc.)
+            const viewportHeight = window.visualViewport.height;
+            
+            // Calcula a altura do teclado (ou outro elemento da UI do sistema)
+            const keyboardHeight = windowHeight - viewportHeight;
+
+            // Define um threshold para evitar ajustes por pequenas mudanças de UI
+            if (keyboardHeight > 50) {
+                // Move o painel para cima, para ficar acima do teclado
+                panelContainer.style.bottom = `${keyboardHeight}px`;
+            } else {
+                // Reseta a posição do painel quando o teclado desaparece
+                panelContainer.style.bottom = '0px';
+            }
+        };
+
+        // Adiciona o listener para o evento de resize da VisualViewport
+        window.visualViewport.addEventListener('resize', handleViewportChange);
+        
+        // Chama a função uma vez para o caso de o teclado já estar aberto no carregamento da página
+        handleViewportChange();
+    } else {
+        console.warn('A API VisualViewport não é suportada neste navegador. O ajuste do painel pode não funcionar corretamente.');
+    }
+}
+
+// Chama a função para configurar o listener assim que o script for carregado.
+// Como este é um módulo, isso será executado uma vez quando o módulo for importado pela primeira vez.
+setupViewportListener();

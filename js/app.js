@@ -7,7 +7,7 @@ import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, startLocationT
 import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel, showPage } from './ui.js';
 import { saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
-import { querySuggestionCache, saveRide, getOngoingRide } from './firestore.js';
+import { querySuggestionCache, saveRide, getOngoingRide, updateRideStatus } from './firestore.js';
 import { setupPWA } from './pwa.js';
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -165,7 +165,20 @@ function setupAppEventListeners() {
         }
     });
 
-    dom.cancelButton.addEventListener('click', () => {
+    dom.cancelButton.addEventListener('click', async () => {
+        const userId = localStorage.getItem('user_uid');
+        if (userId) {
+            const ongoingRide = await getOngoingRide(userId);
+            if (ongoingRide && ongoingRide.id) {
+                const success = await updateRideStatus(ongoingRide.id, 'canceled');
+                if (success) {
+                    showPushNotification("Sua corrida foi cancelada.", "info");
+                } else {
+                    showPushNotification("Não foi possível cancelar a corrida. Tente novamente.", "error");
+                }
+            }
+        }
+
         clearFieldsAndMap();
         const panel = dom.collapsiblePanel;
         if (panel && panel.classList.contains('open')) {

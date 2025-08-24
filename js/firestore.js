@@ -46,8 +46,32 @@ export async function getUserProfile(userId) {
     }
   } catch (error) {
     console.error("Erro ao buscar o perfil do usuário:", error);
-    return null;
-  }
+        return null;
+    }
+}
+
+/**
+ * Atualiza o status de uma corrida existente.
+ * @param {string} rideId - O ID da corrida a ser atualizada.
+ * @param {string} newStatus - O novo status para a corrida (ex: 'canceled', 'completed').
+ * @returns {Promise<boolean>} True se a atualização for bem-sucedida, false caso contrário.
+ */
+export async function updateRideStatus(rideId, newStatus) {
+    if (!rideId || !newStatus) {
+        console.error("ID da corrida e novo status são necessários.");
+        return false;
+    }
+
+    const rideRef = doc(db, "viaja1", "dados", "corridas", rideId);
+
+    try {
+        await setDoc(rideRef, { status: newStatus }, { merge: true });
+        console.log(`Status da corrida ${rideId} atualizado para ${newStatus}.`);
+        return true;
+    } catch (error) {
+        console.error(`Erro ao atualizar status da corrida ${rideId}:`, error);
+        return false;
+    }
 }
 
 /**
