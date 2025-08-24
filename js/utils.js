@@ -166,3 +166,17 @@ export function haversineDistance(coords1, coords2) {
     
     return R * c;
 }
+
+/**
+ * Normaliza um texto, removendo acentos e convertendo para minúsculas.
+ * @param {string} text - O texto a ser normalizado.
+ * @returns {string} O texto normalizado.
+ */
+export function normalizeText(text) {
+    if (!text) return '';
+    return text
+        .toString()
+        .toLowerCase()
+        .normalize("NFD") // Decompõe os caracteres acentuados
+        .replace(/[\u0300-\u036f]/g, ""); // Remove os diacríticos (acentos)
+}

@@ -1,7 +1,7 @@
 import { dom } from './dom.js';
 import * as state from './state.js';
 import { saveAppState, loadAppState } from './state.js';
-import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice } from './utils.js';
+import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice, normalizeText } from './utils.js';
 import { getLocationByIP, reverseGeocode } from './api.js';
 import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, startLocationTracking, stopLocationTracking } from './map.js';
 import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel } from './ui.js';
@@ -143,10 +143,12 @@ function setupAppEventListeners() {
     });
 
     let currentAbortController;
+    let currentInlineSuggestion = null; // Variável para armazenar a sugestão completa
 
     dom.destinationInput.addEventListener('input', debounce(async (e) => {
         const query = e.target.value;
         dom.autocompleteGhost.value = '';
+        currentInlineSuggestion = null; // Reseta a sugestão a cada input
 
         if (state.currentDestination) return;
 
@@ -160,8 +162,12 @@ function setupAppEventListeners() {
 
         // Lógica de autocompletar in-line (consulta o cache)
         querySuggestionCache(query).then(suggestion => {
-            if (suggestion && suggestion.rua.toLowerCase().startsWith(query.toLowerCase())) {
-                dom.autocompleteGhost.value = suggestion.rua;
+            // A verificação agora também usa a normalização para ser consistente com a busca
+            if (suggestion && normalizeText(suggestion.rua).startsWith(normalizeText(query))) {
+                // Armazena a sugestão completa e formatada
+                currentInlineSuggestion = suggestion.rua; 
+                const remainingText = suggestion.rua.substring(query.length);
+                dom.autocompleteGhost.value = query + remainingText;
             }
         });
 
@@ -180,13 +186,24 @@ function setupAppEventListeners() {
     }, 300));
 
     dom.destinationInput.addEventListener('keydown', (e) => {
-        if ((e.key === 'Tab' || e.key === 'Enter') && dom.autocompleteGhost.value) {
+        // Usa a sugestão completa armazenada ao invés do valor do "fantasma"
+        if ((e.key === 'Tab' || e.key === 'Enter') && currentInlineSuggestion) {
             e.preventDefault();
-            dom.destinationInput.value = dom.autocompleteGhost.value;
+            
+            // Usa a sugestão formatada corretamente
+            dom.destinationInput.value = currentInlineSuggestion; 
+            
             dom.autocompleteGhost.value = '';
-            // Passa um novo AbortSignal ao autocompletar
+            const finalValue = currentInlineSuggestion;
+            currentInlineSuggestion = null; // Limpa a sugestão após o uso
+            
+            // Cria um novo AbortController para a nova busca
             const abortController = new AbortController();
             displayAddressSuggestions(dom.destinationInput, dom.destinationSuggestions, abortController.signal);
+            
+            // Move o cursor para o final do texto
+            dom.destinationInput.focus();
+            dom.destinationInput.setSelectionRange(finalValue.length, finalValue.length);
         }
     });
 

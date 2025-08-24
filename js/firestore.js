@@ -1,5 +1,6 @@
 import { db } from './firebase-config.js';
 import { doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { normalizeText } from './utils.js';
 
 /**
  * Salva ou atualiza os dados do perfil de um usuário no Firestore.
@@ -63,9 +64,9 @@ export async function saveSuggestionToCache(place) {
 
     const suggestionsRef = collection(db, "viaja1", "dados", "sugestoes_cache");
     
-    // Verifica se já existe uma sugestão idêntica (usando lowercase)
+    // Verifica se já existe uma sugestão idêntica (usando texto normalizado)
     const q = query(suggestionsRef, 
-        where("rua_lowercase", "==", road.toLowerCase()),
+        where("rua_lowercase", "==", normalizeText(road)),
         where("cidade", "==", city)
     );
 
@@ -77,7 +78,7 @@ export async function saveSuggestionToCache(place) {
             await setDoc(newSuggestionRef, {
                 id: newSuggestionRef.id, // Salva o próprio ID do documento
                 rua: road,
-                rua_lowercase: road.toLowerCase(), // Campo para busca case-insensitive
+                rua_lowercase: normalizeText(road), // Campo para busca normalizada
                 bairro: suburb || '',
                 cidade: city,
                 uf: state || '',
@@ -103,10 +104,11 @@ export async function querySuggestionCache(queryText) {
 
     const suggestionsRef = collection(db, "viaja1", "dados", "sugestoes_cache");
     
-    // Consulta por ruas que começam com o texto digitado (case-insensitive)
+    // Consulta por ruas que começam com o texto digitado (normalizado)
+    const normalizedQuery = normalizeText(queryText);
     const q = query(suggestionsRef,
-        where("rua_lowercase", ">=", queryText.toLowerCase()),
-        where("rua_lowercase", "<=", queryText.toLowerCase() + '\uf8ff'),
+        where("rua_lowercase", ">=", normalizedQuery),
+        where("rua_lowercase", "<=", normalizedQuery + '\uf8ff'),
         limit(1)
     );
 
@@ -181,11 +183,15 @@ export async function migrateSuggestionCache() {
 
         snapshot.forEach(doc => {
             const data = doc.data();
-            // Verifica se o campo 'rua' existe e 'rua_lowercase' não existe
-            if (data.rua && typeof data.rua === 'string' && !data.rua_lowercase) {
-                const updatePromise = setDoc(doc.ref, { rua_lowercase: data.rua.toLowerCase() }, { merge: true });
-                promises.push(updatePromise);
-                migratedCount++;
+            // Verifica se o campo 'rua' existe e se o campo 'rua_lowercase' precisa ser atualizado
+            if (data.rua && typeof data.rua === 'string') {
+                const normalizedValue = normalizeText(data.rua);
+                // Atualiza apenas se o valor normalizado for diferente do que já existe
+                if (data.rua_lowercase !== normalizedValue) {
+                    const updatePromise = setDoc(doc.ref, { rua_lowercase: normalizedValue }, { merge: true });
+                    promises.push(updatePromise);
+                    migratedCount++;
+                }
             }
         });
 

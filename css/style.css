@@ -146,7 +146,7 @@ body {
 
 .input-group-destination {
     border-color: #22c55e;
-    box-shadow: inset 30px 0 0 0 #22c55e;
+    box-shadow: inset 43px 0 0 0 #22c55e;
 }
 
 .select-in-field-button {
@@ -578,7 +578,7 @@ body.dark #auth-menu-button {
 }
 
 /* Estilos para o modal de login */
-#login-modal, #register-modal, #forgot-password-modal, #verify-code-modal, #gps-modal, #history-modal, #favorites-modal, #vehicle-selection-modal {
+#login-modal, #register-modal, #forgot-password-modal, #verify-code-modal, #gps-modal, #history-modal, #favorites-modal, #vehicle-selection-modal, #profile-modal, #confirmation-modal, #house-number-modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -588,10 +588,10 @@ body.dark #auth-menu-button {
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 1050; /* Aumentado para garantir que fique acima de outros elementos com z-index */
 }
 
-#login-modal.visible, #register-modal.visible, #forgot-password-modal.visible, #verify-code-modal.visible, #gps-modal.visible, #history-modal:not(.hidden), #favorites-modal:not(.hidden), #vehicle-selection-modal:not(.hidden) {
+#login-modal.visible, #register-modal.visible, #forgot-password-modal.visible, #verify-code-modal.visible, #gps-modal.visible, #history-modal:not(.hidden), #favorites-modal:not(.hidden), #vehicle-selection-modal:not(.hidden), #profile-modal:not(.hidden), #confirmation-modal:not(.hidden), #house-number-modal:not(.hidden) {
     display: flex;
 }
 
