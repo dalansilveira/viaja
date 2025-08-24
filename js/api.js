@@ -2,6 +2,7 @@
 // e não estar diretamente no código do frontend.
 import { calculateBoundingBox } from './utils.js';
 import { updateDebugConsole } from './ui.js';
+import { AppConfig } from './config.js';
 
 const OPENCAGE_API_KEY = '49810e6bb57044b990140e0accfa637e';
 
@@ -12,14 +13,14 @@ const OPENCAGE_API_KEY = '49810e6bb57044b990140e0accfa637e';
  * @returns {Promise<Array>} Uma lista de locais correspondentes.
  */
 export async function fetchAddressSuggestions(query, proximityCoords = null, signal) {
-    if (query.length < 2) {
+    if (query.length < AppConfig.MIN_GEO_API_QUERY_LENGTH) {
         return [];
     }
 
     let url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(query)}&key=${OPENCAGE_API_KEY}&countrycode=br&limit=7&language=pt`;
 
     if (proximityCoords) {
-        const bounds = calculateBoundingBox(proximityCoords.lat, proximityCoords.lng, 50); // Raio de 50 km
+        const bounds = calculateBoundingBox(proximityCoords.lat, proximityCoords.lng, AppConfig.GEO_API_PROXIMITY_RADIUS_KM); // Raio de 50 km
         url += `&bounds=${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}`;
     }
 

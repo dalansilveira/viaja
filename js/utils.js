@@ -1,3 +1,5 @@
+import { AppConfig } from './config.js';
+
 /**
  * Limita a taxa de execução de uma função.
  * @param {Function} func A função a ser debounced.
@@ -76,14 +78,6 @@ export function formatTime(totalSeconds) {
     return `${hours} h ${remainingMinutes} min`;
 }
 
-// Definição das tarifas de transporte
-export const vehicleRates = {
-    'Moto': { base: 6.00, perKm: 1.50, minFare: 8.00 },
-    'Carro': { base: 8.00, perKm: 2.50, minFare: 12.00 },
-    'Lotação': { base: 5.00, perKm: 1.00, minFare: 7.00 },
-    'Entrega': { base: 7.00, perKm: 2.00, minFare: 10.00 }
-};
-
 /**
  * Estima a tarifa com base na distância e no tipo de veículo.
  * @param {number} distanceKm - Distância em quilômetros.
@@ -91,7 +85,7 @@ export const vehicleRates = {
  * @returns {string} Preço formatado em R$.
  */
 export function estimateFare(distanceKm, vehicleType) {
-    const rates = vehicleRates[vehicleType];
+    const rates = AppConfig.VEHICLE_RATES[vehicleType];
     if (!rates) return "R$ --";
     
     const totalFare = rates.base + (distanceKm * rates.perKm);

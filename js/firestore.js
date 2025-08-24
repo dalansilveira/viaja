@@ -115,7 +115,7 @@ export async function saveSuggestionToCache(place) {
             console.log("Nova rua salva no cache:", road);
         } else {
             // Opcional: log para indicar que a duplicata foi encontrada e ignorada.
-            console.log(`Rua duplicada encontrada no cache, não será salva: "${road}"`);
+        //    console.log(`Rua duplicada encontrada no cache, não será salva: "${road}"`);
         }
     } catch (error) {
         console.error("Erro ao salvar sugestão no cache:", error);
@@ -129,7 +129,7 @@ export async function saveSuggestionToCache(place) {
  */
 export async function querySuggestionCache(queryText) {
     console.log(`Consultando cache do Firestore para: "${queryText}"`);
-    if (!queryText || queryText.length < 3) return null;
+    if (!queryText || queryText.length < 6) return null;
 
     const suggestionsRef = collection(db, "viaja1", "dados", "sugestoes_cache");
     

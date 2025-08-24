@@ -330,7 +330,7 @@ function renderSuggestion(place, _, inputEl, suggestionsEl, iconType, userTypedN
     `;
 
     suggestionDiv.addEventListener('click', () => {
-        const hasHouseNumber = place.address?.house_number || inputEl.value.match(/,\s*\d+/);
+        const hasHouseNumber = place.address?.house_number || /, \d+$/.test(place.display_name);
         
         if (hasHouseNumber) {
             setDestination(place, inputEl, suggestionsEl);

@@ -11,6 +11,7 @@ import { querySuggestionCache, saveRide, getOngoingRide, updateRideStatus } from
 import { setupPWA } from './pwa.js';
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged, getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { AppConfig } from './config.js';
 
 function clearFieldsAndMap() {
     // 1. Limpar estado e marcador de destino
@@ -47,6 +48,38 @@ function clearFieldsAndMap() {
     });
     
     refreshMap();
+}
+
+function clearRouteOnly() {
+    // Limpa a rota do mapa e da UI
+    if (state.routeControl) {
+        state.map.removeControl(state.routeControl);
+        state.setRouteControl(null);
+    }
+    if (state.startCircle) {
+        state.map.removeLayer(state.startCircle);
+        state.setStartCircle(null);
+    }
+    if (state.endCircle) {
+        state.map.removeLayer(state.endCircle);
+        state.setEndCircle(null);
+    }
+    state.resetTripData();
+    dom.estimatedDistanceTimeEl.textContent = '';
+    dom.routeInfoDisplay.textContent = '';
+    dom.routeInfoDisplay.classList.add('hidden');
+    
+    dom.vehicleButtons.forEach(button => {
+        button.querySelector('.vehicle-price').textContent = '';
+    });
+
+    // Reseta o estado do destino para permitir uma nova seleção, mas não limpa o input
+    state.setCurrentDestination(null);
+    if (state.destinationMarker) {
+        state.map.removeLayer(state.destinationMarker);
+        state.setDestinationMarker(null);
+    }
+    dom.destinationInput.closest('.input-group').classList.remove('input-filled');
 }
 
 
@@ -87,6 +120,12 @@ export function requestRide() {
         state.setCurrentSelectionMode(null);
     }
 }
+
+const addressPrefixes = [
+    'Rua', 'R.', 'Avenida', 'Av.', 'Praça', 'Pç.', 'Travessa', 'Tr.',
+    'Estrada', 'Estr.', 'Rodovia', 'Rod.', 'Alameda', 'Al.', 'Largo',
+    'Viela', 'Via', 'Trevo', 'Passarela'
+];
 
 function setupAppEventListeners() {
     dom.toggleLocationButton.addEventListener('click', handleLocationToggle);
@@ -208,8 +247,31 @@ function setupAppEventListeners() {
     });
 
     dom.destinationInput.addEventListener('focus', (e) => {
+        const vehiclePage = document.getElementById('page3');
+        const isVehicleSelectionActive = vehiclePage && !vehiclePage.classList.contains('hidden');
+
+        // CONDIÇÃO: Se já temos um destino E estamos na tela de veículos...
+        if (state.currentDestination && isVehicleSelectionActive) {
+            // AÇÃO 1: Limpa APENAS a rota, mantendo o texto do input.
+            clearRouteOnly();
+            // AÇÃO 2: Volta o painel para a página 2 (sugestões de endereço).
+            showPage('page2');
+
+            // AÇÃO 3: Posiciona o cursor no final do texto para edição.
+            const input = e.target;
+            const end = input.value.length;
+            input.setSelectionRange(end, end);
+
+            // AÇÃO 4 (NOVA): Popula a lista de sugestões com base no texto atual.
+            const abortController = new AbortController();
+            displayAddressSuggestions(input, dom.destinationSuggestions, abortController.signal);
+
+            // AÇÃO 5: Interrompe a função aqui.
+            return;
+        }
+
+        // Comportamento original mantido para todos os outros casos.
         dom.autocompleteGhost.style.display = 'block';
-        // Passa um AbortSignal vazio para a primeira chamada no focus
         const abortController = new AbortController();
         displayAddressSuggestions(e.target, dom.destinationSuggestions, abortController.signal);
     });
@@ -242,15 +304,53 @@ function setupAppEventListeners() {
         const signal = currentAbortController.signal;
 
         // Lógica de autocompletar in-line (consulta o cache)
-        querySuggestionCache(query).then(suggestion => {
-            // A verificação agora também usa a normalização para ser consistente com a busca
-            if (suggestion && normalizeText(suggestion.rua).startsWith(normalizeText(query))) {
-                // Armazena a sugestão completa e formatada
-                currentInlineSuggestion = suggestion.rua; 
-                const remainingText = suggestion.rua.substring(query.length);
-                dom.autocompleteGhost.value = query + remainingText;
+        const findSuggestionAndDisplay = async () => {
+            if (query.length < AppConfig.MIN_GHOST_QUERY_LENGTH) {
+                return;
             }
-        });
+
+            let suggestion = null;
+            
+            // Cria uma lista de possíveis buscas, começando pela busca direta
+            const searchTerms = [query, ...addressPrefixes.map(p => `${p} ${query}`)];
+
+            for (const term of searchTerms) {
+                console.log(`[DEBUG] Tentando consultar cache com: "${term}"`);
+                suggestion = await querySuggestionCache(term);
+                if (suggestion) {
+                    console.log(`[DEBUG] Sugestão encontrada para "${term}":`, suggestion);
+                    break; // Encontrou uma correspondência, para o loop
+                }
+            }
+
+            if (suggestion) {
+                // Armazena a sugestão completa e correta para ser usada ao aceitar.
+                currentInlineSuggestion = suggestion.rua;
+
+                // Encontra a parte da sugestão que corresponde à busca (com ou sem prefixo)
+                const normalizedQuery = normalizeText(query);
+                const normalizedSuggestion = normalizeText(suggestion.rua);
+                
+                let suggestionMatch = '';
+                if (normalizedSuggestion.includes(normalizedQuery)) {
+                    const startIndex = normalizedSuggestion.indexOf(normalizedQuery);
+                    suggestionMatch = suggestion.rua.substring(startIndex);
+                }
+
+                // Se encontrou uma correspondência, constrói o texto fantasma
+                if (suggestionMatch) {
+                    const remainingText = suggestionMatch.substring(query.length);
+                    dom.autocompleteGhost.value = query + remainingText;
+                } else {
+                    // Fallback: se algo der errado, apenas mostra a sugestão completa
+                    dom.autocompleteGhost.value = suggestion.rua;
+                }
+            } else {
+                console.log(`[DEBUG] Nenhuma sugestão encontrada para "${query}" com ou sem prefixos.`);
+            }
+        };
+
+        findSuggestionAndDisplay();
 
         // Lógica da lista de sugestões (consulta a API com o signal)
         displayAddressSuggestions(e.target, dom.destinationSuggestions, signal);
@@ -264,23 +364,29 @@ function setupAppEventListeners() {
             traceRoute(); // Limpa a rota e os círculos
             dom.destinationInput.closest('.input-group').classList.remove('input-filled');
         }
-    }, 300));
+    }, AppConfig.INPUT_DEBOUNCE_DELAY));
 
     const handleGhostTextCompletion = (e) => {
-        console.log(`Evento '${e.type}' disparado no texto fantasma.`);
+        //  console.log(`Evento '${e.type}' disparado no texto fantasma.`);
         // Previne o comportamento padrão (como perder o foco do input)
         e.preventDefault();
-        
+
         if (currentInlineSuggestion) {
-            dom.destinationInput.value = currentInlineSuggestion;
+            let finalValue = currentInlineSuggestion;
+            const hasNumber = /, \d+$/.test(finalValue);
+
+            if (!hasNumber) {
+                finalValue += ', Nº ';
+            }
+
+            dom.destinationInput.value = finalValue;
             dom.autocompleteGhost.value = '';
-            const finalValue = currentInlineSuggestion;
             currentInlineSuggestion = null;
 
             // Dispara a busca de sugestões com o valor completo
             const abortController = new AbortController();
             displayAddressSuggestions(dom.destinationInput, dom.destinationSuggestions, abortController.signal);
-            
+
             // Foca no input e move o cursor para o final
             dom.destinationInput.focus();
             dom.destinationInput.setSelectionRange(finalValue.length, finalValue.length);
@@ -294,18 +400,22 @@ function setupAppEventListeners() {
         // Usa a sugestão completa armazenada ao invés do valor do "fantasma"
         if ((e.key === 'Tab' || e.key === 'Enter') && currentInlineSuggestion) {
             e.preventDefault();
-            
-            // Usa a sugestão formatada corretamente
-            dom.destinationInput.value = currentInlineSuggestion; 
-            
+
+            let finalValue = currentInlineSuggestion;
+            const hasNumber = /, \d+$/.test(finalValue);
+
+            if (!hasNumber) {
+                finalValue += ', Nº ';
+            }
+
+            dom.destinationInput.value = finalValue;
             dom.autocompleteGhost.value = '';
-            const finalValue = currentInlineSuggestion;
             currentInlineSuggestion = null; // Limpa a sugestão após o uso
-            
+
             // Cria um novo AbortController para a nova busca
             const abortController = new AbortController();
             displayAddressSuggestions(dom.destinationInput, dom.destinationSuggestions, abortController.signal);
-            
+
             // Move o cursor para o final do texto
             dom.destinationInput.focus();
             dom.destinationInput.setSelectionRange(finalValue.length, finalValue.length);
