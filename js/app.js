@@ -7,6 +7,7 @@ import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, startLocationT
 import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel } from './ui.js';
 import { saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
+import { querySuggestionCache } from './firestore.js';
 import { setupPWA } from './pwa.js';
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -136,13 +137,38 @@ function setupAppEventListeners() {
     });
 
     dom.destinationInput.addEventListener('focus', (e) => {
-        displayAddressSuggestions(e.target, dom.destinationSuggestions);
+        // Passa um AbortSignal vazio para a primeira chamada no focus
+        const abortController = new AbortController();
+        displayAddressSuggestions(e.target, dom.destinationSuggestions, abortController.signal);
     });
 
-    dom.destinationInput.addEventListener('input', debounce((e) => {
+    let currentAbortController;
+
+    dom.destinationInput.addEventListener('input', debounce(async (e) => {
+        const query = e.target.value;
+        dom.autocompleteGhost.value = '';
+
         if (state.currentDestination) return;
-        displayAddressSuggestions(e.target, dom.destinationSuggestions);
-        if (e.target.value === '') {
+
+        // Cancela a requisição anterior se houver uma em andamento
+        if (currentAbortController) {
+            currentAbortController.abort();
+        }
+        // Cria um novo AbortController para a requisição atual
+        currentAbortController = new AbortController();
+        const signal = currentAbortController.signal;
+
+        // Lógica de autocompletar in-line (consulta o cache)
+        querySuggestionCache(query).then(suggestion => {
+            if (suggestion && suggestion.rua.toLowerCase().startsWith(query.toLowerCase())) {
+                dom.autocompleteGhost.value = suggestion.rua;
+            }
+        });
+
+        // Lógica da lista de sugestões (consulta a API com o signal)
+        displayAddressSuggestions(e.target, dom.destinationSuggestions, signal);
+
+        if (query === '') {
             state.setCurrentDestination(null);
             if (state.destinationMarker) {
                 state.map.removeLayer(state.destinationMarker);
@@ -152,6 +178,17 @@ function setupAppEventListeners() {
             dom.destinationInput.closest('.input-group').classList.remove('input-filled');
         }
     }, 300));
+
+    dom.destinationInput.addEventListener('keydown', (e) => {
+        if ((e.key === 'Tab' || e.key === 'Enter') && dom.autocompleteGhost.value) {
+            e.preventDefault();
+            dom.destinationInput.value = dom.autocompleteGhost.value;
+            dom.autocompleteGhost.value = '';
+            // Passa um novo AbortSignal ao autocompletar
+            const abortController = new AbortController();
+            displayAddressSuggestions(dom.destinationInput, dom.destinationSuggestions, abortController.signal);
+        }
+    });
 
     dom.themeToggle.addEventListener('click', () => {
         toggleTheme();

@@ -288,7 +288,10 @@
                         </a>
                     </div>
                 </div>
-                <input type="text" id="destination-input" placeholder="Para onde?" autocomplete="off" class="destination-input address-input flex-grow rounded-r-lg">
+                <div class="relative flex-grow input-container">
+                    <input type="text" id="destination-input" placeholder="Para onde?" autocomplete="off" class="destination-input address-input flex-grow rounded-r-lg relative z-10 bg-transparent">
+                    <input type="text" id="autocomplete-ghost" readonly>
+                </div>
                 <div id="destination-loading-indicator" class="loading-indicator-container">
                     <div class="loading-indicator"></div>
                 </div>

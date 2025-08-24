@@ -78,5 +78,6 @@ export const dom = {
     houseNumberModal: document.getElementById('house-number-modal'),
     houseNumberInput: document.getElementById('house-number-input'),
     confirmHouseNumberButton: document.getElementById('confirm-house-number-button'),
-    cancelHouseNumberButton: document.getElementById('cancel-house-number-button')
+    cancelHouseNumberButton: document.getElementById('cancel-house-number-button'),
+    autocompleteGhost: document.getElementById('autocomplete-ghost')
 };

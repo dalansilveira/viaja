@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /**
  * Salva ou atualiza os dados do perfil de um usuário no Firestore.
@@ -12,8 +12,8 @@ export async function saveUserProfile(userId, profileData) {
     return;
   }
   try {
-    // Cria uma referência para o documento do usuário na coleção 'users'
-    const userDocRef = doc(db, "users", userId);
+    // Cria uma referência para o documento do usuário na subcoleção 'users'
+    const userDocRef = doc(db, "viaja1", "dados", "users", userId);
     // Usa setDoc com merge: true para criar ou atualizar o documento
     await setDoc(userDocRef, profileData, { merge: true });
     console.log("Perfil do usuário salvo com sucesso:", userId);
@@ -33,7 +33,7 @@ export async function getUserProfile(userId) {
     return null;
   }
   try {
-    const userDocRef = doc(db, "users", userId);
+    const userDocRef = doc(db, "viaja1", "dados", "users", userId);
     const docSnap = await getDoc(userDocRef);
 
     if (docSnap.exists()) {
@@ -47,4 +47,157 @@ export async function getUserProfile(userId) {
     console.error("Erro ao buscar o perfil do usuário:", error);
     return null;
   }
+}
+
+/**
+ * Salva uma sugestão de endereço no cache global do Firestore se ela não existir.
+ * @param {object} place - O objeto de local da API de geocodificação.
+ */
+export async function saveSuggestionToCache(place) {
+    if (!place || !place.address || !place.address.road || !place.address.city) {
+        return; // Não salva se os dados essenciais estiverem faltando
+    }
+
+    const { road, suburb, city, state } = place.address;
+    const { lat, lon } = place;
+
+    const suggestionsRef = collection(db, "viaja1", "dados", "sugestoes_cache");
+    
+    // Verifica se já existe uma sugestão idêntica (usando lowercase)
+    const q = query(suggestionsRef, 
+        where("rua_lowercase", "==", road.toLowerCase()),
+        where("cidade", "==", city)
+    );
+
+    try {
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            // Se não houver duplicatas, adiciona o novo documento com um ID automático
+            const newSuggestionRef = doc(suggestionsRef);
+            await setDoc(newSuggestionRef, {
+                id: newSuggestionRef.id, // Salva o próprio ID do documento
+                rua: road,
+                rua_lowercase: road.toLowerCase(), // Campo para busca case-insensitive
+                bairro: suburb || '',
+                cidade: city,
+                uf: state || '',
+                lat: lat,
+                lng: lon,
+                createdAt: serverTimestamp()
+            });
+            console.log("Sugestão salva no cache global:", place.display_name);
+        }
+    } catch (error) {
+        console.error("Erro ao salvar sugestão no cache:", error);
+    }
+}
+
+/**
+ * Consulta o cache de sugestões para encontrar uma correspondência de autocompletar.
+ * @param {string} queryText - O texto parcial da rua.
+ * @returns {Promise<object|null>} O documento de sugestão correspondente ou nulo.
+ */
+export async function querySuggestionCache(queryText) {
+    console.log(`Consultando cache do Firestore para: "${queryText}"`);
+    if (!queryText || queryText.length < 3) return null;
+
+    const suggestionsRef = collection(db, "viaja1", "dados", "sugestoes_cache");
+    
+    // Consulta por ruas que começam com o texto digitado (case-insensitive)
+    const q = query(suggestionsRef,
+        where("rua_lowercase", ">=", queryText.toLowerCase()),
+        where("rua_lowercase", "<=", queryText.toLowerCase() + '\uf8ff'),
+        limit(1)
+    );
+
+    try {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const bestMatch = querySnapshot.docs[0].data();
+            console.log("Resultado da consulta ao cache:", bestMatch);
+            return bestMatch;
+        } else {
+            console.log("Nenhum resultado encontrado no cache para a consulta.");
+        }
+        return null;
+    } catch (error) {
+        console.error("Erro ao consultar o cache de sugestões:", error);
+        return null;
+    }
+}
+
+/**
+ * (APENAS PARA MIGRAÇÃO) Move os dados da coleção 'users' para a nova subcoleção.
+ * Esta função deve ser chamada manualmente uma vez a partir do console do navegador.
+ */
+export async function migrateUserData() {
+    console.log("Iniciando migração de dados de usuários...");
+    const oldUsersRef = collection(db, "users");
+    const oldUsersSnap = await getDocs(oldUsersRef);
+
+    if (oldUsersSnap.empty) {
+        console.log("Nenhum usuário encontrado na coleção antiga. Nenhuma migração necessária.");
+        return;
+    }
+
+    let migratedCount = 0;
+    for (const userDoc of oldUsersSnap.docs) {
+        const userId = userDoc.id;
+        const userData = userDoc.data();
+        const newUserRef = doc(db, "viaja1", "dados", "users", userId);
+
+        try {
+            await setDoc(newUserRef, userData);
+            console.log(`Usuário ${userId} migrado com sucesso.`);
+            // ATENÇÃO: A exclusão do documento antigo deve ser feita com cuidado.
+            // Por segurança, vamos deixar isso comentado por enquanto.
+            // await deleteDoc(userDoc.ref);
+            migratedCount++;
+        } catch (error) {
+            console.error(`Erro ao migrar usuário ${userId}:`, error);
+        }
+    }
+    console.log(`Migração concluída. ${migratedCount} de ${oldUsersSnap.size} usuários migrados.`);
+}
+
+/**
+ * (APENAS PARA MIGRAÇÃO) Adiciona o campo 'rua_lowercase' aos documentos existentes no cache.
+ * Esta função deve ser chamada manualmente uma vez a partir do console do navegador.
+ */
+export async function migrateSuggestionCache() {
+    console.log("Iniciando migração do cache de sugestões...");
+    const suggestionsRef = collection(db, "viaja1", "dados", "sugestoes_cache");
+    
+    try {
+        const snapshot = await getDocs(suggestionsRef);
+
+        if (snapshot.empty) {
+            console.log("Nenhuma sugestão no cache. Nenhuma migração necessária.");
+            return;
+        }
+
+        let migratedCount = 0;
+        const promises = [];
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            // Verifica se o campo 'rua' existe e 'rua_lowercase' não existe
+            if (data.rua && typeof data.rua === 'string' && !data.rua_lowercase) {
+                const updatePromise = setDoc(doc.ref, { rua_lowercase: data.rua.toLowerCase() }, { merge: true });
+                promises.push(updatePromise);
+                migratedCount++;
+            }
+        });
+
+        if (promises.length === 0) {
+            console.log("Todos os documentos já estão atualizados. Nenhuma migração necessária.");
+            return;
+        }
+
+        await Promise.all(promises);
+        console.log(`Migração do cache concluída. ${migratedCount} de ${snapshot.size} documentos atualizados.`);
+
+    } catch (error) {
+        console.error("Erro durante a migração do cache de sugestões:", error);
+    }
 }

@@ -5,9 +5,9 @@ import { reverseGeocode, fetchAddressSuggestions } from './api.js';
 import { formatPlaceForDisplay, haversineDistance } from './utils.js';
 import { addOrMoveMarker, traceRoute } from './map.js';
 import { saveDestinationToHistory } from './history.js';
+import { saveSuggestionToCache } from './firestore.js';
 
 let mapMessageTimeout;
-let suggestionAbortController = null;
 
 /**
  * Exibe uma mensagem flutuante temporária.
@@ -170,14 +170,9 @@ export async function handleMapClick(e) {
  * Exibe e atualiza as sugestões de endereço, incluindo histórico e favoritos.
  * @param {HTMLInputElement} inputEl - O elemento de input.
  * @param {HTMLDivElement} suggestionsEl - O container para as sugestões.
+ * @param {AbortSignal} signal - O signal do AbortController para cancelar a requisição.
  */
-export async function displayAddressSuggestions(inputEl, suggestionsEl) {
-    if (suggestionAbortController) {
-        suggestionAbortController.abort();
-    }
-    suggestionAbortController = new AbortController();
-    const signal = suggestionAbortController.signal;
-
+export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) {
     const loadingIndicator = document.getElementById('destination-loading-indicator');
     loadingIndicator.style.display = 'block';
 
@@ -265,7 +260,7 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
         header.textContent = 'Selecione um endereço';
         suggestionsEl.appendChild(header);
 
-        // Renderiza cada item
+        // Renderiza cada item e salva no cache
         finalResults.forEach(place => {
             const isFavorite = favorites.some(fav => fav.place_id === place.place_id);
             const isHistory = history.some(hist => hist.place_id === place.place_id);
@@ -274,6 +269,11 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl) {
             else if (isHistory) iconType = 'history';
             
             renderSuggestion(place, place.display_name, inputEl, suggestionsEl, iconType, userTypedNumber);
+            
+            // Salva no cache se for da mesma cidade do usuário
+            if (state.currentOrigin && state.currentOrigin.data.address.city && place.address.city && place.address.city.toLowerCase() === state.currentOrigin.data.address.city.toLowerCase()) {
+                saveSuggestionToCache(place);
+            }
         });
 
         // Se houver resultados e nenhum destino estiver selecionado, abra o painel na página 2
