@@ -90,6 +90,14 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
         if (marker.dragging) {
             isDraggable ? marker.dragging.enable() : marker.dragging.disable();
         }
+        if (type === 'destination' && name) {
+            marker.bindTooltip(name, {
+                permanent: true,
+                direction: 'bottom',
+                offset: [0, 10],
+                className: 'destination-tooltip'
+            }).openTooltip();
+        }
     } else {
         marker = L.marker(coords, { 
             icon: customIcon,
@@ -143,6 +151,14 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
             state.setOriginMarker(marker);
         } else {
             state.setDestinationMarker(marker);
+            if (name) {
+                marker.bindTooltip(name, {
+                    permanent: true,
+                    direction: 'bottom',
+                    offset: [0, 10],
+                    className: 'destination-tooltip'
+                }).openTooltip();
+            }
         }
     }
 }
@@ -179,7 +195,8 @@ export function traceRoute(fitBounds = false) {
     ];
 
     addOrMoveMarker(state.currentOrigin.latlng, 'origin', 'Origem');
-    addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino');
+    const destinationName = state.currentDestination.data ? formatPlaceForDisplay(state.currentDestination.data) : 'Destino';
+    addOrMoveMarker(state.currentDestination.latlng, 'destination', destinationName);
 
     if (waypoints.length < 2) {
         return;

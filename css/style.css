@@ -1090,3 +1090,35 @@ body.dark #toggle-location-button:hover {
     z-index: 1; /* Garante que o texto digitado fique sobre o fantasma */
     background-color: transparent; /* Garante que o fantasma seja visível por trás */
 }
+
+.destination-tooltip {
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    color: var(--text-color);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.destination-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent var(--border-color) transparent;
+}
+
+body.dark .destination-tooltip {
+    background-color: #1f2937;
+    border-color: #4a5568;
+    color: #e5e7eb;
+}
+
+body.dark .destination-tooltip::before {
+    border-color: transparent transparent #4a5568 transparent;
+}

@@ -622,6 +622,18 @@ async function initializeApp() {
     setupCollapsiblePanel();
     setupPWA();
 
+    // Impede que o Leaflet "capture" os eventos de clique nos contêineres de input
+    const inputContainers = [
+        document.getElementById('destination-container'),
+        document.getElementById('panel-container')
+    ];
+    inputContainers.forEach(container => {
+        if (container) {
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.disableScrollPropagation(container);
+        }
+    });
+
     // Desativa a restauração de estado para evitar problemas
     localStorage.removeItem('viaja_appState');
     
