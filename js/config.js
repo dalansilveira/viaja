@@ -18,4 +18,7 @@ export const AppConfig = {
         'Lotação': { base: 5.00, perKm: 1.00, minFare: 7.00 },
         'Entrega': { base: 7.00, perKm: 2.00, minFare: 10.00 }
     },
+
+    // Chave da API para o serviço OpenCageData
+    OPENCAGE_API_KEY: 'f9ac031b19484703bfb57a553a0d9c4b',
 };

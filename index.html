@@ -301,6 +301,7 @@
 
     <!-- Contêiner do Mapa (Fixo no Topo) -->
     <div id="map-container">
+        <button id="test-driver-sim" style="position: absolute; top: 80px; left: 10px; z-index: 1000;" class="bg-red-500 text-white p-2 rounded hidden">Testar Sim</button>
         <div id="map" class="h-full w-full"></div>
         <div id="map-message" class="map-message">Toque no mapa para selecionar o local</div>
         <div id="route-info-display" class="text-center font-semibold text-gray-700 dark:text-gray-300 my-2 hidden"></div>
@@ -407,6 +408,17 @@
                                 </p>
                             </div>
                             <button id="cancel-button" class="mt-6 button-clear">Cancelar</button>
+                        </div>
+                    </div>
+                    <div id="page6" class="page-content hidden">
+                        <div class="flex flex-col items-center text-center">
+                            <img id="driver-photo" src="" alt="Foto do Motorista" class="w-24 h-24 rounded-full object-cover border-4 border-gray-300 dark:border-gray-600 mb-4">
+                            <h2 id="driver-name" class="text-xl font-bold"></h2>
+                            <p id="driver-eta" class="text-lg text-blue-500 font-semibold"></p>
+                            <div class="mt-4 bg-gray-100 dark:bg-gray-800 p-3 rounded-lg w-full max-w-xs">
+                                <p id="driver-vehicle-model" class="font-semibold"></p>
+                                <p id="driver-vehicle-plate" class="text-sm font-mono tracking-widest"></p>
+                            </div>
                         </div>
                     </div>
                 </div>

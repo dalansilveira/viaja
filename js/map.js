@@ -1,10 +1,11 @@
 import * as state from './state.js';
 import { dom } from './dom.js';
 import { handleMapClick, showPushNotification, showPage } from './ui.js';
-import { formatTime, estimateFare, formatPlaceForDisplay } from './utils.js';
+import { formatTime, estimateFare, formatPlaceForDisplay, debounce } from './utils.js';
 import { reverseGeocode, getLocationByIP } from './api.js';
 
 let currentTileLayer;
+let animationFrameId = null;
 
 /**
  * Define o tema do mapa (claro ou escuro) usando Stadia Maps.
@@ -61,15 +62,15 @@ export function initializeMap(lat, lng, zoom = 13, isDark) {
  * @param {boolean} isDraggable - Se o marcador pode ser arrastado.
  */
 export function addOrMoveMarker(coords, type, name, isDraggable = true) {
-    // Se o rastreamento de localização estiver ativo, o marcador de origem nunca deve ser arrastável.
-    if (type === 'origin' && state.isTrackingLocation) {
-        isDraggable = false;
-    }
-
     let marker = type === 'origin' ? state.originMarker : state.destinationMarker;
 
     const pinClass = type === 'origin' ? 'pin-blue-svg' : 'pin-green-svg';
-    const trackingClass = (type === 'origin' && state.isTrackingLocation) ? 'tracking-active' : '';
+    let trackingClass = '';
+    if (type === 'origin') {
+        trackingClass = 'tracking-active';
+    } else if (type === 'destination') {
+        trackingClass = 'tracking-active-green';
+    }
     const markerHtml = `<div class="marker-container ${trackingClass}">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-10 h-10 ${pinClass} pin-shadow">
                                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
@@ -260,78 +261,171 @@ export function traceRoute(fitBounds = false) {
 }
 
 /**
- * Inicia o rastreamento contínuo da localização do usuário.
+ * Busca a localização atual do usuário uma única vez.
  */
-export function startLocationTracking() {
-    if (state.locationWatchId) {
-        stopLocationTracking();
-    }
+export function updateUserLocationOnce() {
+   
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const { latitude, longitude } = position.coords;
+            const newLatLng = { lat: latitude, lng: longitude };
 
-    const handlePositionUpdate = async (lat, lng) => {
-        const newLatLng = { lat, lng };
-        state.setCurrentUserCoords(newLatLng);
+            state.setCurrentUserCoords(newLatLng);
+            addOrMoveMarker(newLatLng, 'origin', 'Sua Localização', true);
 
-        // Atualiza o marcador de origem, tornando-o não arrastável
-        addOrMoveMarker(newLatLng, 'origin', 'Sua Localização', false);
+            const fullAddressData = await reverseGeocode(latitude, longitude);
+            const addressText = formatPlaceForDisplay(fullAddressData) || 'Localização atual';
+            if(fullAddressData) {
+                fullAddressData.display_name = addressText;
+            }
+            state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
 
-        // Atualiza o campo de texto de origem com o novo endereço
-        const fullAddressData = await reverseGeocode(lat, lng);
-        const addressText = formatPlaceForDisplay(fullAddressData) || 'Localização atual';
-        fullAddressData.display_name = addressText;
-        state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
-
-        state.map.setView(newLatLng, 13);
-    };
-
-    const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-            handlePositionUpdate(position.coords.latitude, position.coords.longitude);
+            state.map.setView(newLatLng, 16); // Zoom mais próximo para localização única
+            
         },
         async (error) => {
-            console.error("Erro no rastreamento de localização por GPS: ", error);
+            console.error("Erro ao obter localização por GPS: ", error);
+            showPushNotification('Não foi possível obter sua localização GPS. Tentando por IP...', 'warning');
             try {
                 const ipLocation = await getLocationByIP();
                 if (ipLocation) {
-                    handlePositionUpdate(ipLocation.lat, ipLocation.lng);
+                    const newLatLng = { lat: ipLocation.lat, lng: ipLocation.lng };
+                    state.setCurrentUserCoords(newLatLng);
+                    addOrMoveMarker(newLatLng, 'origin', 'Localização Aproximada', true);
+                    const fullAddressData = await reverseGeocode(ipLocation.lat, ipLocation.lng);
+                    state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
+                    state.map.setView(newLatLng, 13);
+                    showPushNotification('Localização aproximada encontrada.', 'info');
                 } else {
-                    stopLocationTracking();
+                    showPushNotification('Não foi possível obter sua localização.', 'error');
                 }
             } catch (ipError) {
                 console.error("Erro ao buscar localização por IP:", ipError);
-                stopLocationTracking();
+                showPushNotification('Não foi possível obter sua localização.', 'error');
             }
         },
         {
             enableHighAccuracy: true,
-            timeout: 5000,
+            timeout: 8000, // Aumenta o timeout para dar mais chance ao GPS
             maximumAge: 0
         }
     );
-
-    state.setLocationWatchId(watchId);
-    state.setIsTrackingLocation(true);
 }
 
-/**
- * Para o rastreamento contínuo da localização do usuário.
- */
-export function stopLocationTracking() {
-    if (state.locationWatchId !== null) {
-        navigator.geolocation.clearWatch(state.locationWatchId);
-        state.setLocationWatchId(null);
-    }
-    state.setIsTrackingLocation(false);
-    state.setCurrentUserCoords(null); // Limpa a última localização conhecida
+function createDriverMarker(coords) {
+    const driverIconHtml = `
+        <div class="relative flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-800 dark:text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8a1 1 0 001 1h1a1 1 0 001-1v-1h12v1a1 1 0 001 1h1a1 1 0 001-1v-8l-2.08-5.99zM6.5 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm11 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM5 10l1.5-4.5h11L19 10H5z"/>
+            </svg>
+        </div>`;
+    const driverIcon = L.divIcon({
+        html: driverIconHtml,
+        className: 'leaflet-div-icon',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+    });
 
-    // Torna o marcador de origem arrastável novamente
-    if (state.originMarker) {
-        const iconElement = state.originMarker.getElement();
-        if (iconElement) {
-            const container = iconElement.querySelector('.marker-container');
-            if (container) container.classList.remove('tracking-active');
-        }
-        if (state.originMarker.dragging) {
-            state.originMarker.dragging.enable();
-        }
+    const marker = L.marker(coords, { icon: driverIcon, zIndexOffset: 1000 }).addTo(state.map);
+    state.setDriverMarker(marker);
+}
+
+export function simulateDriverEnRoute(originCoords) {
+    // Remove a rota principal (usuário -> destino) para evitar conflitos
+    if (state.routeControl) {
+        state.map.removeControl(state.routeControl);
+        state.setRouteControl(null);
     }
+    // Remove os círculos de início e fim da rota principal
+    if (state.startCircle) {
+        state.map.removeLayer(state.startCircle);
+        state.setStartCircle(null);
+    }
+    if (state.endCircle) {
+        state.map.removeLayer(state.endCircle);
+        state.setEndCircle(null);
+    }
+
+    // Oculta o pino de destino
+    if (state.destinationMarker) {
+        state.map.removeLayer(state.destinationMarker);
+    }
+
+    // 1. Ponto de partida aleatório para o motorista
+    const startLat = originCoords.lat + (Math.random() - 0.5) * 0.05;
+    const startLng = originCoords.lng + (Math.random() - 0.5) * 0.05;
+    const driverStartCoords = L.latLng(startLat, startLng);
+
+    createDriverMarker(driverStartCoords);
+
+    // 2. Calcula a rota do motorista até o usuário
+    const control = L.Routing.control({
+        waypoints: [driverStartCoords, L.latLng(originCoords.lat, originCoords.lng)],
+        createMarker: () => null,
+        lineOptions: {
+            styles: [{color: '#22c55e', opacity: 0.8, weight: 5}]
+        },
+        show: false
+    }).addTo(state.map);
+
+    control.on('routesfound', (e) => {
+        const route = e.routes[0];
+        const routeCoords = route.coordinates;
+        state.map.fitBounds(route.coordinates, { padding: [50, 50] });
+
+        // Remove o controle de rota original, pois vamos manipular a linha manualmente
+        state.map.removeControl(control);
+
+        // Cria nossa própria polilinha para que possamos atualizá-la
+        const driverRoutePolyline = L.polyline(routeCoords, {
+            color: '#22c55e',
+            opacity: 0.8,
+            weight: 5
+        }).addTo(state.map);
+
+        const duration = 180000; // 3 minutos
+        let startTime = null;
+
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const progress = (timestamp - startTime) / duration;
+
+            if (progress < 1) {
+                // Calcula o índice atual na matriz de coordenadas
+                const currentIndex = Math.floor(progress * (routeCoords.length - 1));
+                const newPos = routeCoords[currentIndex];
+
+                if (state.driverMarker) {
+                    state.driverMarker.setLatLng(newPos);
+                }
+
+                // Cria a nova rota, mais curta
+                const remainingRoute = routeCoords.slice(currentIndex);
+                driverRoutePolyline.setLatLngs(remainingRoute);
+
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                if (state.driverMarker) {
+                    state.driverMarker.setLatLng(L.latLng(originCoords.lat, originCoords.lng));
+                }
+                showPushNotification('Seu motorista chegou!', 'success');
+                if (driverRoutePolyline) {
+                    state.map.removeLayer(driverRoutePolyline);
+                }
+            }
+        }
+        animationFrameId = requestAnimationFrame(animate);
+    });
+}
+
+export function stopDriverSimulation() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    if (state.driverMarker) {
+        state.map.removeLayer(state.driverMarker);
+        state.setDriverMarker(null);
+    }
+    // Adicione aqui a lógica para remover a rota do motorista se necessário
 }

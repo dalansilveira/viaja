@@ -3,7 +3,7 @@ import * as state from './state.js';
 import { saveAppState, loadAppState } from './state.js';
 import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice, normalizeText } from './utils.js';
 import { getLocationByIP, reverseGeocode } from './api.js';
-import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, startLocationTracking, stopLocationTracking } from './map.js';
+import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, updateUserLocationOnce, simulateDriverEnRoute, stopDriverSimulation } from './map.js';
 import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel, showPage } from './ui.js';
 import { saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
@@ -90,22 +90,9 @@ function setupInitialEventListeners() {
     });
 }
 
-function handleLocationToggle() {
-    if (state.isTrackingLocation) {
-        stopLocationTracking();
-        dom.toggleLocationButton.classList.remove('active');
-    } else {
-        startLocationTracking();
-        dom.toggleLocationButton.classList.add('active');
-    }
-}
-
 function handleCurrentLocation() {
     toggleGpsModal(false);
-    if (!state.isTrackingLocation) {
-        startLocationTracking();
-        dom.toggleLocationButton.classList.add('active');
-    }
+    updateUserLocationOnce();
 }
 
 export function requestRide() {
@@ -127,8 +114,47 @@ const addressPrefixes = [
     'Viela', 'Via', 'Trevo', 'Passarela'
 ];
 
+function generateFakeDriver() {
+    const names = ['Carlos', 'Mariana', 'João', 'Ana', 'Lucas', 'Sofia'];
+    const cars = [
+        { model: 'Fiat Mobi', color: 'Branco' },
+        { model: 'Hyundai HB20', color: 'Prata' },
+        { model: 'Chevrolet Onix', color: 'Preto' },
+        { model: 'Renault Kwid', color: 'Vermelho' }
+    ];
+    const plates = ['BRA2E19', 'ABC1234', 'XYZ8901', 'RST4567'];
+    const photos = [
+        'https://i.pravatar.cc/150?img=68',
+        'https://i.pravatar.cc/150?img=32',
+        'https://i.pravatar.cc/150?img=60',
+        'https://i.pravatar.cc/150?img=1'
+    ];
+
+    return {
+        name: names[Math.floor(Math.random() * names.length)],
+        car: cars[Math.floor(Math.random() * cars.length)],
+        plate: plates[Math.floor(Math.random() * plates.length)],
+        photo: photos[Math.floor(Math.random() * photos.length)]
+    };
+}
+
 function setupAppEventListeners() {
-    dom.toggleLocationButton.addEventListener('click', handleLocationToggle);
+    let simRunning = false;
+    document.getElementById('test-driver-sim').addEventListener('click', () => {
+        if (simRunning) {
+            stopDriverSimulation();
+            simRunning = false;
+        } else {
+            if (state.currentOrigin) {
+                simulateDriverEnRoute(state.currentOrigin.latlng);
+                simRunning = true;
+            } else {
+                showPushNotification('Defina uma origem primeiro.', 'warning');
+            }
+        }
+    });
+
+    dom.toggleLocationButton.addEventListener('click', updateUserLocationOnce);
 
     dom.recenterMapButton.addEventListener('click', clearFieldsAndMap);
 
@@ -204,6 +230,15 @@ function setupAppEventListeners() {
                 console.log("Tentando salvar no histórico:", historyEntry);
                 saveDestinationToHistory(historyEntry);
             }
+
+            // Trava a interface para evitar alterações
+            dom.destinationInput.disabled = true;
+            if (state.originMarker) {
+                state.originMarker.dragging.disable();
+            }
+            if (state.destinationMarker) {
+                state.destinationMarker.dragging.disable();
+            }
             
             // Lógica para iniciar a busca pela corrida
             dom.statusMessage.textContent = `Procurando ${state.tripData.vehicle} disponível...`;
@@ -218,6 +253,24 @@ function setupAppEventListeners() {
             }
             
             showPage('page5');
+
+            // Simula a aceitação da corrida e mostra a tela do motorista
+            setTimeout(() => {
+                const driver = generateFakeDriver();
+                
+                document.getElementById('driver-photo').src = driver.photo;
+                document.getElementById('driver-name').textContent = `${driver.name} aceitou sua corrida.`;
+                document.getElementById('driver-eta').textContent = 'Chegando em aproximadamente 1 min...';
+                document.getElementById('driver-vehicle-model').textContent = `${driver.car.model} - ${driver.car.color}`;
+                document.getElementById('driver-vehicle-plate').textContent = driver.plate;
+
+                showPage('page6');
+
+                // Inicia a simulação do motorista no mapa
+                if (state.currentOrigin) {
+                    simulateDriverEnRoute(state.currentOrigin.latlng);
+                }
+            }, 2000);
         } else {
             showPushNotification("Ocorreu um erro ao salvar sua corrida. Tente novamente.", "error");
         }
@@ -305,6 +358,12 @@ function setupAppEventListeners() {
 
         // Lógica de autocompletar in-line (consulta o cache)
         const findSuggestionAndDisplay = async () => {
+            // Se o usuário já digitou um número, não mostra a sugestão in-line.
+            const hasNumber = /, \d+$/.test(query);
+            if (hasNumber) {
+                return;
+            }
+
             if (query.length < AppConfig.MIN_GHOST_QUERY_LENGTH) {
                 return;
             }
@@ -335,17 +394,10 @@ function setupAppEventListeners() {
                 if (normalizedSuggestion.includes(normalizedQuery)) {
                     const startIndex = normalizedSuggestion.indexOf(normalizedQuery);
                     suggestionMatch = suggestion.rua.substring(startIndex);
-                }
+            }
+            
 
-                // Se encontrou uma correspondência, constrói o texto fantasma
-                if (suggestionMatch) {
-                    const remainingText = suggestionMatch.substring(query.length);
-                    dom.autocompleteGhost.value = query + remainingText;
-                } else {
-                    // Fallback: se algo der errado, apenas mostra a sugestão completa
-                    dom.autocompleteGhost.value = suggestion.rua;
-                }
-            } else {
+        } else {
                 console.log(`[DEBUG] Nenhuma sugestão encontrada para "${query}" com ou sem prefixos.`);
             }
         };
@@ -554,8 +606,7 @@ async function initializeMapAndLocation(isDark) {
 
     // 6. SEMPRE tenta iniciar o rastreamento de localização por padrão, se disponível
     if (navigator.geolocation) {
-        startLocationTracking();
-        dom.toggleLocationButton.classList.add('active');
+        updateUserLocationOnce();
         // Se ainda não tivermos uma origem definida, o rastreamento cuidará disso
     } else {
         // Se não houver geolocalização e não foi possível encontrar a localização por outros meios, mostra o modal

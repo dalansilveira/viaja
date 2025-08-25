@@ -234,8 +234,16 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
             });
         }
 
-        // 5. Filtrar por resultados que contenham uma rua e limitar ao máximo de 6
-        const finalResults = uniqueResults.filter(place => place.address && place.address.road).slice(0, 6);
+        // 5. Filtrar por resultados que contenham uma rua
+        let finalResults = uniqueResults.filter(place => place.address && place.address.road);
+
+        // Se o usuário digitou um número, mostre apenas o resultado mais relevante.
+        if (userTypedNumber && finalResults.length > 0) {
+            finalResults = [finalResults[0]];
+        } else {
+            // Caso contrário, limite a 6 sugestões.
+            finalResults = finalResults.slice(0, 6);
+        }
 
         // 6. Renderizar os resultados
         loadingIndicator.style.display = 'none';
@@ -303,8 +311,15 @@ function renderSuggestion(place, _, inputEl, suggestionsEl, iconType, userTypedN
     };
 
     const road = place.address?.road || '';
-    const houseNumber = place.address?.house_number || userTypedNumber || '';
-    const mainText = [road, houseNumber].filter(Boolean).join(', ');
+    let mainText = road; // Começa apenas com a rua
+
+    // Adiciona o número com a marcação especial se ele foi digitado pelo usuário
+    if (userTypedNumber) {
+        mainText += `, <span class="user-typed-number">${userTypedNumber}</span>`;
+    } else if (place.address?.house_number) {
+        // Se não, usa o número da API, mas sem a marcação
+        mainText += `, ${place.address.house_number}`;
+    }
 
     const neighbourhood = place.address?.suburb || place.address?.neighbourhood || '';
     const city = place.address?.city || place.address?.town || place.address?.village || '';
@@ -336,25 +351,45 @@ function renderSuggestion(place, _, inputEl, suggestionsEl, iconType, userTypedN
             setDestination(place, inputEl, suggestionsEl);
         } else {
             dom.houseNumberModal.classList.remove('hidden');
+            dom.houseNumberInput.value = ''; // Limpa o campo para novas entradas
             dom.houseNumberInput.focus();
 
-            const confirmListener = () => {
+            // --- Nova Lógica de Fechamento ---
+            let confirmListener, cancelListener, overlayClickListener;
+
+            const closeModal = () => {
+                dom.houseNumberModal.classList.add('hidden');
+                // Remove todos os listeners para evitar duplicação e vazamento de memória
+                dom.confirmHouseNumberButton.removeEventListener('click', confirmListener);
+                dom.cancelHouseNumberButton.removeEventListener('click', cancelListener);
+                dom.houseNumberModal.removeEventListener('click', overlayClickListener);
+            };
+
+            confirmListener = () => {
                 const houseNumber = dom.houseNumberInput.value;
                 if (houseNumber) {
                     place.address.house_number = houseNumber;
                     place.display_name = `${place.address.road}, ${houseNumber}, ${place.address.city}`;
                     setDestination(place, inputEl, suggestionsEl);
-                    dom.houseNumberModal.classList.add('hidden');
-                    dom.confirmHouseNumberButton.removeEventListener('click', confirmListener);
+                    closeModal();
                 }
             };
 
-            dom.confirmHouseNumberButton.addEventListener('click', confirmListener);
+            cancelListener = () => {
+                closeModal();
+            };
 
-            dom.cancelHouseNumberButton.addEventListener('click', () => {
-                dom.houseNumberModal.classList.add('hidden');
-                dom.confirmHouseNumberButton.removeEventListener('click', confirmListener);
-            }, { once: true });
+            overlayClickListener = (e) => {
+                // Fecha apenas se o clique for no elemento de fundo (o próprio modal)
+                if (e.target === dom.houseNumberModal) {
+                    closeModal();
+                }
+            };
+
+            // Adiciona os listeners
+            dom.confirmHouseNumberButton.addEventListener('click', confirmListener);
+            dom.cancelHouseNumberButton.addEventListener('click', cancelListener);
+            dom.houseNumberModal.addEventListener('click', overlayClickListener);
         }
     });
 
@@ -513,6 +548,7 @@ function setupViewportListener() {
         }
 
         const handleViewportChange = () => {
+            const houseNumberModal = document.getElementById('house-number-modal');
             // A altura total da janela interna
             const windowHeight = window.innerHeight;
             // A altura da área visível (descontando o teclado, etc.)
@@ -525,9 +561,17 @@ function setupViewportListener() {
             if (keyboardHeight > 50) {
                 // Move o painel para cima, para ficar acima do teclado
                 panelContainer.style.bottom = `${keyboardHeight}px`;
+                if (houseNumberModal && !houseNumberModal.classList.contains('hidden')) {
+                    houseNumberModal.style.alignItems = 'flex-start';
+                    houseNumberModal.style.paddingTop = '2rem';
+                }
             } else {
                 // Reseta a posição do painel quando o teclado desaparece
                 panelContainer.style.bottom = '0px';
+                if (houseNumberModal && !houseNumberModal.classList.contains('hidden')) {
+                    houseNumberModal.style.alignItems = 'center';
+                    houseNumberModal.style.paddingTop = '0';
+                }
             }
         };
 

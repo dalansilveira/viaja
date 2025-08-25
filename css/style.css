@@ -650,6 +650,17 @@ body.dark .login-input[readonly] {
     color: #9ca3af;
 }
 
+/* Remove as setas de incremento/decremento do input de número */
+#house-number-input::-webkit-outer-spin-button,
+#house-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#house-number-input[type=number] {
+  -moz-appearance: textfield;
+}
+
 .login-buttons-container {
     display: flex;
     gap: 0.5rem;
@@ -695,10 +706,16 @@ body.dark .modal-button.register {
 }
 
 .autocomplete-suggestions {
-    background-color: transparent;
+    background-color: var(--bg-panel);
     border: none;
     box-shadow: none;
     display: none;
+    overflow-y: auto; /* Adiciona a barra de rolagem quando necessário */
+    border-radius: 0.5rem;
+    flex-grow: 1; /* Faz a lista crescer para ocupar o espaço */
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Corrige o problema de overflow do flexbox */
 }
 .suggestion-item {
     display: flex;
@@ -729,6 +746,9 @@ body.dark .autocomplete-suggestions {
 }
 
 .suggestion-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     padding: 0.75rem 1rem;
     font-size: 0.8rem;
     font-weight: 600;
@@ -776,6 +796,11 @@ body.dark .autocomplete-suggestions {
 .suggestion-sub-text.city-mismatch {
     color: #f97316; /* Laranja para destaque */
     font-weight: 500;
+}
+
+.suggestion-main-text .user-typed-number {
+    font-weight: 700; /* Negrito */
+    color: var(--text-color); /* Garante que a cor siga o tema */
 }
 
 /* Estilos para o banner de instalação do PWA */
@@ -892,6 +917,10 @@ body.dark #toggle-location-button:hover {
     padding: 0.5rem;
 }
 
+#test-driver-sim {
+    z-index: 1000;
+}
+
 /* Animação de ondas para rastreamento de localização */
 .marker-container.tracking-active .pin-blue-svg {
     position: relative;
@@ -919,6 +948,37 @@ body.dark #toggle-location-button:hover {
 }
 
 @keyframes wave {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0.5;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+    }
+}
+
+.marker-container.tracking-active-green::before,
+.marker-container.tracking-active-green::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    background-color: #22c55e; /* Cor verde do pino de destino */
+    border-radius: 50%;
+    opacity: 0;
+    animation: wave-green 2s infinite;
+    z-index: 1;
+}
+
+.marker-container.tracking-active-green::after {
+    animation-delay: 1s;
+}
+
+@keyframes wave-green {
     0% {
         transform: translate(-50%, -50%) scale(0.5);
         opacity: 0.5;
@@ -968,10 +1028,31 @@ body.dark #toggle-location-button:hover {
 
 #panel-content {
     height: calc(100% - 32px); /* O conteúdo preenche o espaço restante */
+    display: flex;
+    flex-direction: column;
 }
 
 #toggle-panel-button div {
     background-color: var(--text-muted);
+}
+
+#pagination-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Faz o container preencher o #panel-content */
+}
+
+.page-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+#page2.active {
+    flex-grow: 1; 
+}
+
+#page2 .autocomplete-suggestions {
+    flex-grow: 1; /* Faz a lista de sugestões crescer dentro da página 2 */
 }
 
 /* Estilos para o autocompletar in-line (texto fantasma) */

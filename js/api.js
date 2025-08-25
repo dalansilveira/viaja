@@ -3,8 +3,9 @@
 import { calculateBoundingBox } from './utils.js';
 import { updateDebugConsole } from './ui.js';
 import { AppConfig } from './config.js';
-
-const OPENCAGE_API_KEY = '49810e6bb57044b990140e0accfa637e';
+import { updateUserLastLocation } from './firestore.js';
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import * as state from './state.js';
 
 /**
  * Busca sugestões de endereço com base em uma consulta usando OpenCageData.
@@ -17,16 +18,27 @@ export async function fetchAddressSuggestions(query, proximityCoords = null, sig
         return [];
     }
 
-    let url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(query)}&key=${OPENCAGE_API_KEY}&countrycode=br&limit=7&language=pt`;
+    let url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(query)}&key=${AppConfig.OPENCAGE_API_KEY}&countrycode=br&limit=7&language=pt`;
 
     if (proximityCoords) {
-        const bounds = calculateBoundingBox(proximityCoords.lat, proximityCoords.lng, AppConfig.GEO_API_PROXIMITY_RADIUS_KM); // Raio de 50 km
+        const bounds = calculateBoundingBox(proximityCoords.lat, proximityCoords.lng, AppConfig.GEO_API_PROXIMITY_RADIUS_KM);
         url += `&bounds=${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}`;
     }
 
     try {
+        console.log(`[API] Enviando requisição para OpenCage (Sugestões) com a chave: ${AppConfig.OPENCAGE_API_KEY}`);
         const response = await fetch(url, { signal });
         const data = await response.json();
+
+        const userId = getAuth().currentUser?.uid;
+        if (userId && state.currentUserCoords) {
+            updateUserLastLocation(userId, state.currentUserCoords);
+        }
+        
+        if (data.rate && data.rate.remaining) {
+            console.log(`[COTA OPENCAGE] Requisições restantes hoje: ${data.rate.remaining}`);
+        }
+
         updateDebugConsole(data); // Atualiza o console de depuração
 
         if (data.results && Array.isArray(data.results)) {
@@ -58,11 +70,21 @@ export async function fetchAddressSuggestions(query, proximityCoords = null, sig
  * @returns {Promise<object>} O objeto de dados completo do primeiro resultado.
  */
 export async function reverseGeocode(lat, lng) {
-    const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${OPENCAGE_API_KEY}&language=pt&limit=1`;
+    const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lng}&key=${AppConfig.OPENCAGE_API_KEY}&language=pt&limit=1`;
 
     try {
+        console.log(`[API] Enviando requisição para OpenCage (Reversa) com a chave: ${AppConfig.OPENCAGE_API_KEY}`);
         const response = await fetch(url);
         const data = await response.json();
+
+        const userId = getAuth().currentUser?.uid;
+        if (userId && state.currentUserCoords) {
+            updateUserLastLocation(userId, state.currentUserCoords);
+        }
+
+        if (data.rate && data.rate.remaining) {
+            console.log(`[COTA OPENCAGE] Requisições restantes hoje: ${data.rate.remaining}`);
+        }
 
         if (data.results && data.results.length > 0) {
             const place = data.results[0];

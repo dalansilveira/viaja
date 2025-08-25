@@ -51,6 +51,26 @@ export async function getUserProfile(userId) {
 }
 
 /**
+ * Atualiza a última localização conhecida de um usuário no perfil dele.
+ * @param {string} userId - O ID do usuário.
+ * @param {object} coords - Um objeto com { lat, lng }.
+ */
+export async function updateUserLastLocation(userId, coords) {
+    if (!userId || !coords) return;
+
+    const locationData = {
+        lastLocation: {
+            lat: coords.lat,
+            lng: coords.lng
+        },
+        lastLocationUpdate: serverTimestamp() // Salva a data da atualização
+    };
+    
+    // Reutiliza a função de salvar perfil que já existe
+    await saveUserProfile(userId, locationData);
+}
+
+/**
  * Atualiza o status de uma corrida existente.
  * @param {string} rideId - O ID da corrida a ser atualizada.
  * @param {string} newStatus - O novo status para a corrida (ex: 'canceled', 'completed').

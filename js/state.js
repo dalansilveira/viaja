@@ -4,14 +4,13 @@ export let destinationMarker;
 export let routeControl;
 export let startCircle;
 export let endCircle;
+export let driverMarker = null;
 export let currentOrigin = null;
 export let currentDestination = null; // Pode ser usado para o destino final
 export let currentSelectionMode = null;
 export let deferredPrompt = null;
 export let currentUserCoords = null;
 export let isDraggingMarker = false;
-export let isTrackingLocation = false;
-export let locationWatchId = null;
 export let isMapVisible = false;
 
 export const tripData = {
@@ -52,6 +51,10 @@ export function setEndCircle(circle) {
     endCircle = circle;
 }
 
+export function setDriverMarker(marker) {
+    driverMarker = marker;
+}
+
 export function setCurrentOrigin(origin) {
     currentOrigin = origin;
     saveAppState();
@@ -79,14 +82,6 @@ export function setCurrentUserCoords(coords) {
 
 export function setIsDraggingMarker(isDragging) {
     isDraggingMarker = isDragging;
-}
-
-export function setIsTrackingLocation(isTracking) {
-    isTrackingLocation = isTracking;
-}
-
-export function setLocationWatchId(id) {
-    locationWatchId = id;
 }
 
 export function setMapVisible(visible) {
