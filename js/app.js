@@ -299,10 +299,12 @@ function setupAppEventListeners() {
         showPage('page1'); // Volta para a página inicial do painel
     });
 
-    // Força a abertura do teclado em dispositivos móveis
+    // Força a abertura do teclado em dispositivos móveis de forma agressiva
     dom.destinationInput.addEventListener('touchstart', (e) => {
+        // Impede que outros listeners (como o do Leaflet) sejam acionados
+        e.stopImmediatePropagation();
         dom.destinationInput.focus();
-    });
+    }, { capture: true }); // Usa a fase de captura para ser o primeiro a receber o evento
 
     dom.destinationInput.addEventListener('focus', (e) => {
         const vehiclePage = document.getElementById('page3');
