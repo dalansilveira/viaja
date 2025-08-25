@@ -110,22 +110,28 @@ export async function reverseGeocode(lat, lng) {
 }
 
 /**
- * Obtém a localização do usuário com base no IP.
+ * Obtém a localização do usuário usando a API de Geolocalização do navegador.
  * @returns {Promise<object|null>} As coordenadas de latitude e longitude ou nulo.
  */
-export async function getLocationByIP() {
-    try {
-        const response = await fetch('http://ip-api.com/json');
-        const data = await response.json();
-        if (data && data.status === 'success' && data.lat && data.lon) {
-            return {
-                lat: data.lat,
-                lng: data.lon
-            };
+export function getUserLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            console.error("Geolocalização não é suportada por este navegador.");
+            reject(new Error("Geolocalização não suportada"));
+            return;
         }
-        return null;
-    } catch (error) {
-        console.error("Erro ao obter a localização por IP:", error);
-        return null;
-    }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                resolve({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                });
+            },
+            (error) => {
+                console.error("Erro ao obter a localização:", error);
+                reject(error);
+            }
+        );
+    });
 }

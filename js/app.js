@@ -2,7 +2,7 @@ import { dom } from './dom.js';
 import * as state from './state.js';
 import { saveAppState, loadAppState } from './state.js';
 import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice, normalizeText } from './utils.js';
-import { getLocationByIP, reverseGeocode } from './api.js';
+import { getUserLocation, reverseGeocode } from './api.js';
 import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, updateUserLocationOnce, simulateDriverEnRoute, stopDriverSimulation } from './map.js';
 import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel, showPage } from './ui.js';
 import { saveDestinationToHistory } from './history.js';
@@ -587,19 +587,21 @@ function checkAuthAndInitialize() {
 }
 
 async function initializeMapAndLocation(isDark) {
+    dom.loadingModal.classList.remove('hidden'); // Mostra a modal de carregamento
+
     let initialCoords = null;
     let initialZoom = 2;
 
-    // 1. Se não houver estado salvo, tenta obter a localização por IP como um fallback rápido
+    // 1. Tenta obter a localização precisa do usuário primeiro
     if (!initialCoords) {
         try {
-            const ipLocation = await getLocationByIP();
-            if (ipLocation) {
-                initialCoords = { lat: ipLocation.lat, lng: ipLocation.lng };
-                initialZoom = 13;
+            const userLocation = await getUserLocation();
+            if (userLocation) {
+                initialCoords = { lat: userLocation.lat, lng: userLocation.lng };
+                initialZoom = 15; // Zoom maior para localização precisa
             }
         } catch (error) {
-            console.error("Não foi possível obter a localização por IP na inicialização", error);
+            console.warn("Não foi possível obter a localização precisa via GPS. O usuário pode ter negado a permissão.", error);
         }
     }
     
@@ -613,7 +615,7 @@ async function initializeMapAndLocation(isDark) {
 
     // 6. SEMPRE tenta iniciar o rastreamento de localização por padrão, se disponível
     if (navigator.geolocation) {
-        updateUserLocationOnce();
+        await updateUserLocationOnce(); // Espera a localização ser atualizada
         // Se ainda não tivermos uma origem definida, o rastreamento cuidará disso
     } else {
         // Se não houver geolocalização e não foi possível encontrar a localização por outros meios, mostra o modal
@@ -621,6 +623,8 @@ async function initializeMapAndLocation(isDark) {
             toggleGpsModal(true);
         }
     }
+
+    dom.loadingModal.classList.add('hidden'); // Esconde a modal de carregamento
 }
 
 async function initializeApp() {

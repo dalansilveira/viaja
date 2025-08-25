@@ -58,6 +58,38 @@ export function formatPlaceForDisplay(place) {
 }
 
 /**
+ * Formata um objeto de local da API para uma string específica de tooltip.
+ * Formato: "RUA, Nº\nBAIRRO"
+ * @param {object} place - O objeto de local completo retornado pela API Nominatim.
+ * @returns {string} Uma string de endereço formatada para tooltip.
+ */
+export function formatAddressForTooltip(place) {
+    if (!place || !place.address) return '';
+
+    const address = place.address;
+    const road = address.road || '';
+    const houseNumber = address.house_number || '';
+    const suburb = address.suburb || address.city_district || '';
+
+    let firstLine = road;
+    if (houseNumber) {
+        firstLine += `, ${houseNumber}`;
+    }
+
+    // Se a rua e o bairro forem iguais (e não vazios), mostra só a primeira linha.
+    if (road && road === suburb) {
+        return firstLine;
+    }
+
+    // Se não houver bairro, retorna apenas a primeira linha
+    if (!suburb) {
+        return firstLine;
+    }
+
+    return `${firstLine}\n${suburb}`;
+}
+
+/**
  * Formata segundos em uma string de tempo legível (ex: "15 min").
  * @param {number} totalSeconds - O tempo total em segundos.
  * @returns {string} O tempo formatado.

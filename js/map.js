@@ -1,8 +1,8 @@
 import * as state from './state.js';
 import { dom } from './dom.js';
 import { handleMapClick, showPushNotification, showPage } from './ui.js';
-import { formatTime, estimateFare, formatPlaceForDisplay, debounce } from './utils.js';
-import { reverseGeocode, getLocationByIP } from './api.js';
+import { formatTime, estimateFare, formatPlaceForDisplay, formatAddressForTooltip, debounce } from './utils.js';
+import { reverseGeocode, getUserLocation } from './api.js';
 
 let currentTileLayer;
 let animationFrameId = null;
@@ -94,12 +94,12 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
         if (marker.getTooltip()) {
             marker.unbindTooltip();
         }
-        if (type === 'destination' && name) {
+        if (type === 'origin' && name) { // Mover para o pino de origem
             marker.bindTooltip(name, {
                 permanent: true,
                 direction: 'bottom',
                 offset: [0, 10],
-                className: 'destination-tooltip'
+                className: 'destination-tooltip' // Manter a classe de estilo
             }).openTooltip();
         }
     } else {
@@ -153,9 +153,7 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
 
         if (type === 'origin') {
             state.setOriginMarker(marker);
-        } else {
-            state.setDestinationMarker(marker);
-            if (name) {
+            if (name) { // Adicionar tooltip ao pino de origem na criação
                 marker.bindTooltip(name, {
                     permanent: true,
                     direction: 'bottom',
@@ -163,6 +161,9 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
                     className: 'destination-tooltip'
                 }).openTooltip();
             }
+        } else {
+            state.setDestinationMarker(marker);
+            // Removido o tooltip do pino de destino
         }
     }
 }
@@ -198,9 +199,9 @@ export function traceRoute(fitBounds = false) {
         L.latLng(state.currentDestination.latlng.lat, state.currentDestination.latlng.lng)
     ];
 
-    addOrMoveMarker(state.currentOrigin.latlng, 'origin', 'Origem');
-    const destinationName = state.currentDestination.data ? formatPlaceForDisplay(state.currentDestination.data) : 'Destino';
-    addOrMoveMarker(state.currentDestination.latlng, 'destination', destinationName);
+    const originName = state.currentOrigin.data ? formatAddressForTooltip(state.currentOrigin.data) : 'Origem'; // Usa a nova função de formatação
+    addOrMoveMarker(state.currentOrigin.latlng, 'origin', originName);
+    addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino'); // Não precisa de nome para tooltip aqui
 
     if (waypoints.length < 2) {
         return;
@@ -284,45 +285,48 @@ export function traceRoute(fitBounds = false) {
 /**
  * Busca a localização atual do usuário uma única vez.
  */
-export function updateUserLocationOnce() {
+export async function updateUserLocationOnce() { // Adicionado 'async' aqui
    
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            const { latitude, longitude } = position.coords;
-            const newLatLng = { lat: latitude, lng: longitude };
+    return new Promise((resolve, reject) => { // Retorna uma Promise
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                const newLatLng = { lat: latitude, lng: longitude };
 
             state.setCurrentUserCoords(newLatLng);
-            addOrMoveMarker(newLatLng, 'origin', 'Sua Localização', true);
-
             const fullAddressData = await reverseGeocode(latitude, longitude);
-            const addressText = formatPlaceForDisplay(fullAddressData) || 'Localização atual';
+            const addressText = formatAddressForTooltip(fullAddressData) || 'Localização atual';
             if(fullAddressData) {
                 fullAddressData.display_name = addressText;
             }
             state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
-
+            addOrMoveMarker(newLatLng, 'origin', addressText, true); // Usa o endereço formatado
             state.map.setView(newLatLng, 16); // Zoom mais próximo para localização única
-            
+            resolve(); // Resolve a Promise em caso de sucesso do GPS
         },
         async (error) => {
             console.error("Erro ao obter localização por GPS: ", error);
             showPushNotification('Não foi possível obter sua localização GPS. Tentando por IP...', 'warning');
             try {
-                const ipLocation = await getLocationByIP();
-                if (ipLocation) {
+                const userLocation = await getUserLocation();
+                if (userLocation) {
                     const newLatLng = { lat: ipLocation.lat, lng: ipLocation.lng };
                     state.setCurrentUserCoords(newLatLng);
-                    addOrMoveMarker(newLatLng, 'origin', 'Localização Aproximada', true);
                     const fullAddressData = await reverseGeocode(ipLocation.lat, ipLocation.lng);
+                    const addressText = formatAddressForTooltip(fullAddressData) || 'Localização aproximada';
                     state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
+                    addOrMoveMarker(newLatLng, 'origin', addressText, true); // Usa o endereço formatado
                     state.map.setView(newLatLng, 13);
                     showPushNotification('Localização aproximada encontrada.', 'info');
+                    resolve(); // Resolve a Promise em caso de fallback por IP bem-sucedido
                 } else {
                     showPushNotification('Não foi possível obter sua localização.', 'error');
+                    reject(new Error('Não foi possível obter sua localização.')); // Rejeita se o fallback por IP falhar
                 }
             } catch (ipError) {
                 console.error("Erro ao buscar localização por IP:", ipError);
                 showPushNotification('Não foi possível obter sua localização.', 'error');
+                reject(ipError); // Rejeita em caso de erro no fallback por IP
             }
         },
         {
@@ -331,6 +335,7 @@ export function updateUserLocationOnce() {
             maximumAge: 0
         }
     );
+}); // Fecha a Promise
 }
 
 function createDriverMarker(coords) {

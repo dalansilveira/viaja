@@ -476,6 +476,16 @@ body.dark .notification-close:hover {
     -webkit-animation: spin 2s linear infinite;
     animation: spin 2s linear infinite;
 }
+
+/* Estilos para o Loading Modal */
+#loading-modal .loader {
+    width: 60px;
+    height: 60px;
+    border-width: 6px;
+}
+#loading-modal .loader {
+    border-top-color: #fff; /* Cor branca para o spinner no modal de carregamento */
+}
 @-webkit-keyframes spin {
     0% { -webkit-transform: rotate(0deg); }
     100% { -webkit-transform: rotate(360deg); }
