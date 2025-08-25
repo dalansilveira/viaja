@@ -299,6 +299,11 @@ function setupAppEventListeners() {
         showPage('page1'); // Volta para a página inicial do painel
     });
 
+    // Força a abertura do teclado em dispositivos móveis
+    dom.destinationInput.addEventListener('touchstart', (e) => {
+        dom.destinationInput.focus();
+    });
+
     dom.destinationInput.addEventListener('focus', (e) => {
         const vehiclePage = document.getElementById('page3');
         const isVehicleSelectionActive = vehiclePage && !vehiclePage.classList.contains('hidden');

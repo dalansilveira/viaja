@@ -90,6 +90,10 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
         if (marker.dragging) {
             isDraggable ? marker.dragging.enable() : marker.dragging.disable();
         }
+        // Remove o tooltip antigo e adiciona um novo para garantir a atualização
+        if (marker.getTooltip()) {
+            marker.unbindTooltip();
+        }
         if (type === 'destination' && name) {
             marker.bindTooltip(name, {
                 permanent: true,
