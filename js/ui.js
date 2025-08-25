@@ -547,41 +547,30 @@ function setupViewportListener() {
             return;
         }
 
-            const handleViewportChange = () => {
-                const houseNumberModal = document.getElementById('house-number-modal');
-                const panel = dom.collapsiblePanel; // Obtém a referência ao painel colapsável
 
-                // A altura total da janela interna
-                const windowHeight = window.innerHeight;
-                // A altura da área visível (descontando o teclado, etc.)
-                const viewportHeight = window.visualViewport.height;
-                
-                // Calcula a altura do teclado (ou outro elemento da UI do sistema)
-                const keyboardHeight = windowHeight - viewportHeight;
 
-                // Define um threshold para evitar ajustes por pequenas mudanças de UI
-                if (keyboardHeight > 50) {
-                    // SÓ move o painel para cima se ele estiver ABERTO
-                    if (panel && panel.classList.contains('open')) {
-                        panelContainer.style.bottom = `${keyboardHeight}px`;
-                    } else {
-                        // Se o painel estiver fechado, garante que ele fique na parte inferior
-                        panelContainer.style.bottom = '0px';
-                    }
-                    
-                    if (houseNumberModal && !houseNumberModal.classList.contains('hidden')) {
-                        houseNumberModal.style.alignItems = 'flex-start';
-                        houseNumberModal.style.paddingTop = '2rem';
-                    }
-                } else {
-                    // Reseta a posição do painel quando o teclado desaparece
-                    panelContainer.style.bottom = '0px';
-                    if (houseNumberModal && !houseNumberModal.classList.contains('hidden')) {
-                        houseNumberModal.style.alignItems = 'center';
-                        houseNumberModal.style.paddingTop = '0';
-                    }
-                }
-            };
+
+
+        const handleViewportChange = () => {
+            // A altura total da janela interna
+            const windowHeight = window.innerHeight;
+            // A altura da área visível (descontando o teclado, etc.)
+            const viewportHeight = window.visualViewport.height;
+            
+            // Calcula a altura do teclado (ou outro elemento da UI do sistema)
+            const keyboardHeight = windowHeight - viewportHeight;
+
+            // Define um threshold para evitar ajustes por pequenas mudanças de UI
+            if (keyboardHeight > 50) {
+                // Move o painel para cima, para ficar acima do teclado
+                panelContainer.style.bottom = `${keyboardHeight}px`;
+            } else {
+                // Reseta a posição do painel quando o teclado desaparece
+                panelContainer.style.bottom = '0px';
+            }
+        };
+
+       
 
         // Adiciona o listener para o evento de resize da VisualViewport
         window.visualViewport.addEventListener('resize', handleViewportChange);

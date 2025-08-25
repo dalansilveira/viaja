@@ -2,7 +2,7 @@
   "name": "ViaJá",
   "short_name": "ViaJá",
   "description": "Aplicativo de transporte ViaJá",
-  "start_url": "https://dalansilveira.github.io/viaja/index.html",
+  "start_url": "https://dalansilveira.github.io/viaja/",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#3b82f6",
