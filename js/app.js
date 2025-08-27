@@ -307,33 +307,34 @@ function setupAppEventListeners() {
     }, { capture: true }); // Usa a fase de captura para ser o primeiro a receber o evento
 
     dom.destinationInput.addEventListener('focus', (e) => {
-        const vehiclePage = document.getElementById('page3');
-        const isVehicleSelectionActive = vehiclePage && !vehiclePage.classList.contains('hidden');
+        // Lógica do focus listener temporariamente comentada para depuração.
+        // const vehiclePage = document.getElementById('page3');
+        // const isVehicleSelectionActive = vehiclePage && !vehiclePage.classList.contains('hidden');
 
-        // CONDIÇÃO: Se já temos um destino E estamos na tela de veículos...
-        if (state.currentDestination && isVehicleSelectionActive) {
-            // AÇÃO 1: Limpa APENAS a rota, mantendo o texto do input.
-            clearRouteOnly();
-            // AÇÃO 2: Volta o painel para a página 2 (sugestões de endereço).
-            showPage('page2');
+        // // CONDIÇÃO: Se já temos um destino E estamos na tela de veículos...
+        // if (state.currentDestination && isVehicleSelectionActive) {
+        //     // AÇÃO 1: Limpa APENAS a rota, mantendo o texto do input.
+        //     clearRouteOnly();
+        //     // AÇÃO 2: Volta o painel para a página 2 (sugestões de endereço).
+        //     showPage('page2');
 
-            // AÇÃO 3: Posiciona o cursor no final do texto para edição.
-            const input = e.target;
-            const end = input.value.length;
-            input.setSelectionRange(end, end);
+        //     // AÇÃO 3: Posiciona o cursor no final do texto para edição.
+        //     const input = e.target;
+        //     const end = input.value.length;
+        //     input.setSelectionRange(end, end);
 
-            // AÇÃO 4 (NOVA): Popula a lista de sugestões com base no texto atual.
-            const abortController = new AbortController();
-            displayAddressSuggestions(input, dom.destinationSuggestions, abortController.signal);
+        //     // AÇÃO 4 (NOVA): Popula a lista de sugestões com base no texto atual.
+        //     const abortController = new AbortController();
+        //     displayAddressSuggestions(input, dom.destinationSuggestions, abortController.signal);
 
-            // AÇÃO 5: Interrompe a função aqui.
-            return;
-        }
+        //     // AÇÃO 5: Interrompe a função aqui.
+        //     return;
+        // }
 
-        // Comportamento original mantido para todos os outros casos.
-        dom.autocompleteGhost.style.display = 'block';
-        const abortController = new AbortController();
-        displayAddressSuggestions(e.target, dom.destinationSuggestions, abortController.signal);
+        // // Comportamento original mantido para todos os outros casos.
+        // dom.autocompleteGhost.style.display = 'block';
+        // const abortController = new AbortController();
+        // displayAddressSuggestions(e.target, dom.destinationSuggestions, abortController.signal);
     });
 
     dom.destinationInput.addEventListener('blur', () => {
