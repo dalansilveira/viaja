@@ -1142,3 +1142,17 @@ body.dark .destination-tooltip {
 body.dark .destination-tooltip::before {
     border-color: transparent transparent #4a5568 transparent;
 }
+
+/* Efeito visual para o pino de origem quando arrastável */
+.marker-container.draggable-active .pin-blue-svg {
+    animation: pulse-scale 1s infinite alternate; /* Animação de pulsação */
+}
+
+@keyframes pulse-scale {
+    from {
+        transform: scale(1);
+    }
+    to {
+        transform: scale(1.1);
+    }
+}

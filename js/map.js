@@ -25,7 +25,7 @@ export function setMapTheme(isDark) {
     const attribution = '© <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> © <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> © <a href="http://openstreetmap.org" target="_blank">OpenStreetMap</a> contributors';
 
     currentTileLayer = L.tileLayer(tileUrl, {
-        maxZoom: 19,
+        maxZoom: AppConfig.MAP_ZOOM_LEVELS.MAX_TILE_ZOOM,
         attribution: attribution
     }).addTo(state.map);
 
@@ -40,10 +40,10 @@ export function setMapTheme(isDark) {
  * Inicializa o mapa com as coordenadas e o zoom fornecidos.
  * @param {number} lat - Latitude inicial.
  * @param {number} lng - Longitude inicial.
- * @param {number} [zoom=13] - Nível de zoom inicial.
+ * @param {number} [zoom=AppConfig.MAP_ZOOM_LEVELS.DEFAULT] - Nível de zoom inicial.
  * @param {boolean} isDark - Se o tema inicial deve ser escuro.
  */
-export function initializeMap(lat, lng, zoom = 13, isDark) {
+export function initializeMap(lat, lng, zoom = AppConfig.MAP_ZOOM_LEVELS.DEFAULT, isDark) {
     if (state.map) {
         state.map.remove();
     }
@@ -414,7 +414,7 @@ export async function updateUserLocationOnce() { // Adicionado 'async' aqui
             }
             state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
             addOrMoveMarker(newLatLng, 'origin', addressText, false); // Usa o endereço formatado, arrasto desabilitado por padrão
-            state.map.setView(newLatLng, 16); // Zoom mais próximo para localização única
+            state.map.setView(newLatLng, AppConfig.MAP_ZOOM_LEVELS.USER_LOCATION_GPS); // Zoom mais próximo para localização única
             resolve(); // Resolve a Promise em caso de sucesso do GPS
         },
         async (error) => {
@@ -429,7 +429,7 @@ export async function updateUserLocationOnce() { // Adicionado 'async' aqui
                     const addressText = formatAddressForTooltip(fullAddressData) || 'Localização aproximada';
                     state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
                     addOrMoveMarker(newLatLng, 'origin', addressText, false); // Usa o endereço formatado, arrasto desabilitado por padrão
-                    state.map.setView(newLatLng, 13);
+                    state.map.setView(newLatLng, AppConfig.MAP_ZOOM_LEVELS.USER_LOCATION_IP_FALLBACK);
                     showPushNotification('Localização aproximada encontrada.', 'info');
                     resolve(); // Resolve a Promise em caso de fallback por IP bem-sucedido
                 } else {
@@ -710,6 +710,8 @@ export function simulateDriverEnRoute(originCoords) {
                                         offset: [0, 10],
                                         className: 'destination-tooltip'
                                     }).openTooltip();
+                                    // Centralizar o mapa no destino final
+                                    state.map.setView(state.currentDestination.latlng, AppConfig.MAP_ZOOM_LEVELS.DEFAULT);
                                 }
                                 // Remover o pin de destino
                                 if (state.destinationMarker) {

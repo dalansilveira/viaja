@@ -3,7 +3,7 @@ export const AppConfig = {
     MIN_GHOST_QUERY_LENGTH: 6,
 
     // Número mínimo de caracteres para acionar a busca na API de geocodificação.
-    MIN_GEO_API_QUERY_LENGTH: 2,
+    MIN_GEO_API_QUERY_LENGTH: 3,
 
     // Tempo (em ms) de espera após o usuário parar de digitar para iniciar a busca.
     INPUT_DEBOUNCE_DELAY: 300,
@@ -40,5 +40,14 @@ export const AppConfig = {
     ROUTE_ANIMATION_DURATIONS: {
         driverToOriginMax: 20000, // Duração máxima para a rota do motorista até a origem (40 segundos)
         driverToDestinationMax: 20000 // Duração máxima para a rota da origem até o destino (40 segundos)
+    },
+
+    // Definições de zoom do mapa
+    MAP_ZOOM_LEVELS: {
+        DEFAULT: 10, // Zoom padrão para inicialização do mapa
+        USER_LOCATION_GPS: 16, // Zoom para localização do usuário via GPS
+        USER_LOCATION_IP_FALLBACK: 10, // Zoom para localização do usuário via IP (fallback)
+        MAX_TILE_ZOOM: 19, // Zoom máximo para o tile layer
+        FIT_BOUNDS_PADDING: 50 // Padding para fitBounds
     }
 };
