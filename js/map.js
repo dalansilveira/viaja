@@ -161,6 +161,96 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
                     className: 'destination-tooltip'
                 }).openTooltip();
             }
+
+            // Lógica para toque longo (hold) no marcador de origem
+            let holdTimer;
+            const HOLD_DURATION = 700; // ms
+
+            const markerElement = marker.getElement();
+            if (markerElement) {
+                const startHold = (e) => {
+                    e.stopPropagation(); // Impede que o evento chegue ao mapa
+                    // O marcador já é criado como não arrastável, então não precisamos desabilitá-lo aqui.
+                    holdTimer = setTimeout(() => {
+                        marker.dragging.enable();
+                        state.setIsOriginPinClickDraggable(true); // Habilita o arrasto por clique
+                        // Desabilita o arrasto do mapa para evitar conflito
+                        if (state.map && state.map.dragging) {
+                            state.map.dragging.disable();
+                        }
+                        // Opcional: feedback visual para o usuário que o arrasto foi habilitado
+                        markerElement.classList.add('draggable-active');
+                        // Remove a animação de ondas
+                        const container = markerElement.querySelector('.marker-container');
+                        if (container) container.classList.remove('tracking-active');
+                    }, HOLD_DURATION);
+                };
+
+                const enableMapDragging = () => {
+                    if (state.map && state.map.dragging) {
+                        state.map.dragging.enable();
+                    }
+                };
+
+                state.map.addEventListener('mousedown', enableMapDragging);
+                state.map.addEventListener('touchstart', enableMapDragging, { passive: true });
+
+                const endHold = () => {
+                    clearTimeout(holdTimer);
+                    markerElement.classList.remove('draggable-active');
+                    // A lógica de reabilitação do arrasto do mapa e da animação será tratada no dragend
+                };
+
+                markerElement.addEventListener('mousedown', startHold);
+                markerElement.addEventListener('touchstart', startHold, { passive: true });
+                markerElement.addEventListener('mouseup', endHold);
+                markerElement.addEventListener('touchend', endHold);
+                markerElement.addEventListener('mouseleave', endHold); // Para desktop, se o mouse sair do elemento
+            }
+
+            marker.on('dragend', () => {
+                state.setIsDraggingMarker(false);
+                state.setIsOriginPinClickDraggable(false); // Desabilita o arrasto por clique após o término do arrasto
+                // Desabilita o arrasto novamente após o término
+                if (marker.dragging.enabled()) {
+                    marker.dragging.disable();
+                }
+                // Reabilita o arrasto do mapa
+                if (state.map && state.map.dragging) {
+                    state.map.dragging.enable();
+                }
+                        // Remove a classe de feedback visual
+                const currentMarkerElement = marker.getElement();
+                if (currentMarkerElement) {
+                    currentMarkerElement.classList.remove('draggable-active');
+                    const container = currentMarkerElement.querySelector('.marker-container');
+                    if (container) container.classList.add('tracking-active');
+                }
+                // Reexibe o balão de dica
+                if (name) {
+                    marker.bindTooltip(name, {
+                        permanent: true,
+                        direction: 'bottom',
+                        offset: [0, 10],
+                        className: 'destination-tooltip'
+                    }).openTooltip();
+                }
+                // Lógica de geocodificação reversa e traçado de rota
+                const newLatLng = marker.getLatLng();
+                try {
+                    reverseGeocode(newLatLng.lat, newLatLng.lng).then(fullAddressData => {
+                        state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
+                        if (state.currentDestination) {
+                            traceRoute();
+                        }
+                    }).catch(error => {
+                        console.error("Erro ao buscar endereço de origem:", error);
+                    });
+                } catch (error) {
+                    console.error("Erro ao buscar endereço de origem:", error);
+                }
+            });
+
         } else {
             state.setDestinationMarker(marker);
             // Removido o tooltip do pino de destino
@@ -300,7 +390,7 @@ export async function updateUserLocationOnce() { // Adicionado 'async' aqui
                 fullAddressData.display_name = addressText;
             }
             state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
-            addOrMoveMarker(newLatLng, 'origin', addressText, true); // Usa o endereço formatado
+            addOrMoveMarker(newLatLng, 'origin', addressText, false); // Usa o endereço formatado, arrasto desabilitado por padrão
             state.map.setView(newLatLng, 16); // Zoom mais próximo para localização única
             resolve(); // Resolve a Promise em caso de sucesso do GPS
         },
@@ -315,7 +405,7 @@ export async function updateUserLocationOnce() { // Adicionado 'async' aqui
                     const fullAddressData = await reverseGeocode(ipLocation.lat, ipLocation.lng);
                     const addressText = formatAddressForTooltip(fullAddressData) || 'Localização aproximada';
                     state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
-                    addOrMoveMarker(newLatLng, 'origin', addressText, true); // Usa o endereço formatado
+                    addOrMoveMarker(newLatLng, 'origin', addressText, false); // Usa o endereço formatado, arrasto desabilitado por padrão
                     state.map.setView(newLatLng, 13);
                     showPushNotification('Localização aproximada encontrada.', 'info');
                     resolve(); // Resolve a Promise em caso de fallback por IP bem-sucedido

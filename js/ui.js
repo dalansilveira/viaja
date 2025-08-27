@@ -109,6 +109,8 @@ export function switchPanel(panelId) {
 export async function handleMapClick(e) {
     if (state.isDraggingMarker) return;
 
+    console.log("handleMapClick: state.currentDestination antes da lógica:", state.currentDestination);
+
     const latlng = e.latlng;
 
     // Caso 1: Modo de seleção de destino está ativo
@@ -151,7 +153,7 @@ export async function handleMapClick(e) {
         dom.mapMessage.style.display = 'none';
 
     // Caso 2: Nenhum modo de seleção ativo (ação padrão é definir origem)
-    } else if (!state.currentSelectionMode) {
+    } else if (!state.currentSelectionMode && state.isOriginPinClickDraggable && !state.currentDestination) { // Só move o pin de origem se o modo de arrasto por clique estiver ativo E não houver um destino selecionado
         addOrMoveMarker(latlng, 'origin');
         try {
             const addressData = await reverseGeocode(latlng.lat, latlng.lng);

@@ -12,6 +12,7 @@ export let deferredPrompt = null;
 export let currentUserCoords = null;
 export let isDraggingMarker = false;
 export let isMapVisible = false;
+export let isOriginPinClickDraggable = false; // Nova flag para controlar o arrasto por clique do pin de origem
 
 export const tripData = {
     distance: 0,
@@ -82,6 +83,10 @@ export function setCurrentUserCoords(coords) {
 
 export function setIsDraggingMarker(isDragging) {
     isDraggingMarker = isDragging;
+}
+
+export function setIsOriginPinClickDraggable(isClickDraggable) {
+    isOriginPinClickDraggable = isClickDraggable;
 }
 
 export function setMapVisible(visible) {
