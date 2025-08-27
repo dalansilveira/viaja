@@ -462,10 +462,12 @@ export function simulateDriverEnRoute(originCoords) {
         state.setEndCircle(null);
     }
 
-    // Não remove o pino de destino aqui, ele será reexibido quando o motorista chegar à origem.
-    // if (state.destinationMarker) {
-    //     state.map.removeLayer(state.destinationMarker);
-    // }
+    // Oculta o pino de destino no início da simulação
+    if (state.destinationMarker) {
+        console.log("simulateDriverEnRoute: Removendo pin de destino no início da simulação.");
+        state.map.removeLayer(state.destinationMarker);
+        state.setDestinationMarker(null); // Garante que o estado seja nulo para recriação
+    }
 
     // 1. Ponto de partida aleatório para o motorista (até 2km de distância)
     const maxDistanceKm = 2; // Distância máxima em km
@@ -535,6 +537,11 @@ export function simulateDriverEnRoute(originCoords) {
                 if (driverRoutePolyline) {
                     state.map.removeLayer(driverRoutePolyline);
                 }
+                // Ocultar o pin de origem quando o motorista chega
+                if (state.originMarker) {
+                    state.map.removeLayer(state.originMarker);
+                    state.setOriginMarker(null); // Garante que o estado seja nulo para recriação
+                }
 
                 // Nova lógica: Motorista chegou ao ponto de origem, agora vai para o destino
                 if (state.currentOrigin && state.currentDestination) {
@@ -599,10 +606,22 @@ export function simulateDriverEnRoute(originCoords) {
                                     state.map.removeLayer(finalRoutePolyline);
                                 }
                                 // Mover o pin de origem para o destino final
-                                if (state.originMarker && state.currentDestination) {
+                                // Mover o pin de origem para o destino final
+                                if (state.currentDestination) {
+                                    const newOriginName = state.currentDestination.data ? formatAddressForTooltip(state.currentDestination.data) : 'Origem';
+                                    // Garante que o marcador de origem esteja no mapa antes de movê-lo
+                                    addOrMoveMarker(state.currentDestination.latlng, 'origin', newOriginName);
                                     state.originMarker.setLatLng(state.currentDestination.latlng);
                                     // Atualizar o estado de origem para refletir a nova posição
                                     state.setCurrentOrigin(state.currentDestination);
+                                    // Atualizar o tooltip do pin de origem
+                                    state.originMarker.unbindTooltip(); // Remove o tooltip antigo
+                                    state.originMarker.bindTooltip(newOriginName, {
+                                        permanent: true,
+                                        direction: 'bottom',
+                                        offset: [0, 10],
+                                        className: 'destination-tooltip'
+                                    }).openTooltip();
                                 }
                                 // Remover o pin de destino
                                 if (state.destinationMarker) {
@@ -612,6 +631,15 @@ export function simulateDriverEnRoute(originCoords) {
                                 // Parar a simulação do motorista (remove o marcador do motorista)
                                 stopDriverSimulation();
                                 showPushNotification('Viagem concluída!', 'success');
+                                
+                                // Reativar e limpar o campo de destino
+                                dom.destinationInput.disabled = false;
+                                dom.destinationInput.value = '';
+                                dom.destinationInput.closest('.input-group').classList.remove('input-filled');
+                                delete dom.destinationInput.dataset.lat;
+                                delete dom.destinationInput.dataset.lng;
+                                state.setCurrentDestination(null); // Limpar o estado de destino
+
                                 showPage('page1'); // Volta para a página inicial
                             }
                         }
