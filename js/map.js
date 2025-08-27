@@ -466,7 +466,13 @@ function createDriverMarker(coords, vehicleType = 'car') {
             <div class="relative flex items-center justify-center">
                 <img src="imgs/moto.svg" class="w-10 h-10" alt="Moto">
             </div>`;
-    } else {
+    } else if (vehicleType === 'Carro') {
+        iconHtml = `
+            <div class="relative flex items-center justify-center">
+                <img src="imgs/carro.svg" class="w-10 h-10" alt="Carro">
+            </div>`;
+    }
+    else {
         iconHtml = `
             <div class="relative flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-800 dark:text-white" viewBox="0 0 24 24" fill="currentColor">

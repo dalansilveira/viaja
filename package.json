@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Aplicativo de transporte ViaJá",
   "scripts": {
-    "start": "live-server",
+    "start": "live-server --port=8080",
     "build:css": "node_modules/.bin/tailwindcss -i ./src/input.css -o ./css/style.css --watch"
   },
   "keywords": [],
