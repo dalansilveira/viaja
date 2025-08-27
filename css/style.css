@@ -1107,7 +1107,7 @@ body.dark #toggle-location-button:hover {
 
 #destination-input {
     position: relative;
-    z-index: 1; /* Garante que o texto digitado fique sobre o fantasma */
+    z-index: 3; /* Garante que o texto digitado fique sobre o fantasma e acima do ghost */
     background-color: transparent; /* Garante que o fantasma seja visível por trás */
 }
 

@@ -301,8 +301,13 @@ function setupAppEventListeners() {
 
     // Força a abertura do teclado em dispositivos móveis de forma agressiva
     dom.destinationInput.addEventListener('touchstart', (e) => {
+        // Se o ghost text estiver visível (indicando uma sugestão in-line), aceita a sugestão
+        if (dom.autocompleteGhost.style.display === 'block' && currentInlineSuggestion) {
+            e.preventDefault(); // Previne o comportamento padrão do touch, se necessário
+            acceptInlineSuggestion();
+            return;
+        }
         // Apenas foca no input, permitindo que outros listeners sejam acionados.
-        // e.stopImmediatePropagation(); // Removido para permitir outros listeners
         dom.destinationInput.focus();
     }, { capture: true }); // Usa a fase de captura para ser o primeiro a receber o evento
 
@@ -331,19 +336,28 @@ function setupAppEventListeners() {
         }
 
         // Comportamento original mantido para todos os outros casos.
-        dom.autocompleteGhost.style.display = 'block';
         const abortController = new AbortController();
         displayAddressSuggestions(e.target, dom.destinationSuggestions, abortController.signal);
     });
 
-    dom.destinationInput.addEventListener('blur', () => {
+    // Adiciona o listener de click para aceitar a sugestão in-line
+    dom.destinationInput.addEventListener('click', (e) => {
+        // Se o ghost text estiver visível (indicando uma sugestão in-line), aceita a sugestão
+        if (dom.autocompleteGhost.style.display === 'block' && currentInlineSuggestion) {
+            e.preventDefault(); // Previne o comportamento padrão do clique, se necessário
+            acceptInlineSuggestion();
+        }
+        dom.destinationInput.focus();
+    });
+
+ /*   dom.destinationInput.addEventListener('blur', () => {
         // Usa um pequeno atraso para garantir que o evento 'mousedown' no fantasma possa ser acionado
         // antes que o elemento seja ocultado. O e.preventDefault() no mousedown deve prevenir o blur,
         // mas isso funciona como uma camada extra de segurança.
         setTimeout(() => {
             dom.autocompleteGhost.style.display = 'none';
         }, 150);
-    });
+    });*/
 
     let currentAbortController;
     let currentInlineSuggestion = null; // Variável para armazenar a sugestão completa
@@ -397,14 +411,27 @@ function setupAppEventListeners() {
                 const normalizedQuery = normalizeText(query);
                 const normalizedSuggestion = normalizeText(suggestion.rua);
                 
-                let suggestionMatch = '';
-                if (normalizedSuggestion.includes(normalizedQuery)) {
-                    const startIndex = normalizedSuggestion.indexOf(normalizedQuery);
-                    suggestionMatch = suggestion.rua.substring(startIndex);
-            }
-            
-
-        } else {
+                let ghostText = '';
+                // Usar startsWith para garantir que a sugestão comece com a query (case-insensitive)
+                if (normalizedSuggestion.startsWith(normalizedQuery)) {
+                    // Constrói o ghost text: query do usuário + restante da sugestão (com capitalização original)
+                    const suffixSuggestion = suggestion.rua.substring(query.length);
+                    ghostText = query + suffixSuggestion;
+                }
+                
+                // Exibe o ghost text e preenche com a parte restante da sugestão
+                // Só exibe se houver algo para completar e for diferente do query (ignorando capitalização)
+                if (ghostText && ghostText.toLowerCase() !== query.toLowerCase()) {
+                    console.log(`[DEBUG] Sugestão completa do cache: "${suggestion.rua}", Texto digitado: "${query}", Ghost text (construído): "${ghostText}"`);
+                    dom.autocompleteGhost.value = ghostText;
+                    dom.autocompleteGhost.style.display = 'block';
+                } else {
+                    dom.autocompleteGhost.value = '';
+                    dom.autocompleteGhost.style.display = 'none';
+                }
+            } else {
+                dom.autocompleteGhost.value = '';
+                dom.autocompleteGhost.style.display = 'none';
                 console.log(`[DEBUG] Nenhuma sugestão encontrada para "${query}" com ou sem prefixos.`);
             }
         };
@@ -425,11 +452,8 @@ function setupAppEventListeners() {
         }
     }, AppConfig.INPUT_DEBOUNCE_DELAY));
 
-    const handleGhostTextCompletion = (e) => {
-        //  console.log(`Evento '${e.type}' disparado no texto fantasma.`);
-        // Previne o comportamento padrão (como perder o foco do input)
-        e.preventDefault();
-
+    // Função auxiliar para aceitar a sugestão in-line
+    const acceptInlineSuggestion = () => {
         if (currentInlineSuggestion) {
             let finalValue = currentInlineSuggestion;
             const hasNumber = /, \d+$/.test(finalValue);
@@ -452,32 +476,19 @@ function setupAppEventListeners() {
         }
     };
 
-    dom.autocompleteGhost.addEventListener('mousedown', handleGhostTextCompletion);
-    dom.autocompleteGhost.addEventListener('touchstart', handleGhostTextCompletion);
+    dom.autocompleteGhost.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Previne o blur do input principal
+        acceptInlineSuggestion();
+    });
+    dom.autocompleteGhost.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Previne o blur do input principal
+        acceptInlineSuggestion();
+    });
 
     dom.destinationInput.addEventListener('keydown', (e) => {
-        // Usa a sugestão completa armazenada ao invés do valor do "fantasma"
         if ((e.key === 'Tab' || e.key === 'Enter') && currentInlineSuggestion) {
             e.preventDefault();
-
-            let finalValue = currentInlineSuggestion;
-            const hasNumber = /, \d+$/.test(finalValue);
-
-            if (!hasNumber) {
-                finalValue += ', Nº ';
-            }
-
-            dom.destinationInput.value = finalValue;
-            dom.autocompleteGhost.value = '';
-            currentInlineSuggestion = null; // Limpa a sugestão após o uso
-
-            // Cria um novo AbortController para a nova busca
-            const abortController = new AbortController();
-            displayAddressSuggestions(dom.destinationInput, dom.destinationSuggestions, abortController.signal);
-
-            // Move o cursor para o final do texto
-            dom.destinationInput.focus();
-            dom.destinationInput.setSelectionRange(finalValue.length, finalValue.length);
+            acceptInlineSuggestion();
         }
     });
 
