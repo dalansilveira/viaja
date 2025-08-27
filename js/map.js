@@ -2,7 +2,7 @@ import { AppConfig } from './config.js';
 import * as state from './state.js';
 import { dom } from './dom.js';
 import { handleMapClick, showPushNotification, showPage, showRouteProgressModal, hideRouteProgressModal } from './ui.js';
-import { formatTime, estimateFare, formatPlaceForDisplay, formatAddressForTooltip, debounce } from './utils.js';
+import { formatTime, estimateFare, formatPlaceForDisplay, formatAddressForTooltip, formatDestinationAddressForTooltip, debounce } from './utils.js';
 import { reverseGeocode, getUserLocation } from './api.js';
 
 let currentTileLayer;
@@ -95,7 +95,7 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
         if (marker.getTooltip()) {
             marker.unbindTooltip();
         }
-        if (type === 'origin' && name) { // Mover para o pino de origem
+        if (name) { // Adicionar/Atualizar tooltip para ambos os tipos de pino
             marker.bindTooltip(name, {
                 permanent: true,
                 direction: 'bottom',
@@ -262,7 +262,14 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
 
         } else {
             state.setDestinationMarker(marker);
-            // Removido o tooltip do pino de destino
+            if (name) { // Adicionar tooltip ao pino de destino na criação
+                marker.bindTooltip(name, {
+                    permanent: true,
+                    direction: 'bottom',
+                    offset: [0, 10],
+                    className: 'destination-tooltip'
+                }).openTooltip();
+            }
         }
     }
 }
@@ -302,9 +309,10 @@ export function traceRoute(fitBounds = false) {
         L.latLng(state.currentDestination.latlng.lat, state.currentDestination.latlng.lng)
     ];
 
-    const originName = state.currentOrigin.data ? formatAddressForTooltip(state.currentOrigin.data) : 'Origem'; // Usa a nova função de formatação
+    const originName = state.currentOrigin.data ? formatAddressForTooltip(state.currentOrigin.data) : 'Origem';
+    const destinationName = state.currentDestination.data ? formatDestinationAddressForTooltip(state.currentDestination.data, state.currentOrigin.data) : 'Destino';
     addOrMoveMarker(state.currentOrigin.latlng, 'origin', originName);
-    addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino'); // Não precisa de nome para tooltip aqui
+    addOrMoveMarker(state.currentDestination.latlng, 'destination', destinationName);
 
     if (waypoints.length < 2) {
         hideRouteProgressModal(); // Oculta a modal se não houver waypoints suficientes
@@ -375,7 +383,7 @@ export function traceRoute(fitBounds = false) {
         });
         
         if (fitBounds) {
-            state.map.fitBounds(route.coordinates, { padding: [50, 50] });
+            state.map.fitBounds(route.coordinates, { padding: [AppConfig.MAP_ZOOM_LEVELS.FIT_BOUNDS_PADDING, AppConfig.MAP_ZOOM_LEVELS.FIT_BOUNDS_PADDING] });
         }
 
         // Abre o painel na página 3 para seleção de veículo
@@ -545,6 +553,9 @@ export function simulateDriverEnRoute(originCoords) {
     // Oculta o pino de destino no início da simulação
     if (state.destinationMarker) {
         console.log("simulateDriverEnRoute: Removendo pin de destino no início da simulação.");
+        if (state.destinationMarker.getTooltip()) {
+            state.destinationMarker.unbindTooltip();
+        }
         state.map.removeLayer(state.destinationMarker);
         state.setDestinationMarker(null); // Garante que o estado seja nulo para recriação
     }
@@ -574,7 +585,7 @@ export function simulateDriverEnRoute(originCoords) {
     control.on('routesfound', (e) => {
         const route = e.routes[0];
         const routeCoords = route.coordinates;
-        state.map.fitBounds(route.coordinates, { padding: [50, 50] });
+        state.map.fitBounds(route.coordinates, { padding: [AppConfig.MAP_ZOOM_LEVELS.FIT_BOUNDS_PADDING, AppConfig.MAP_ZOOM_LEVELS.FIT_BOUNDS_PADDING] });
 
         // Remove o controle de rota original, pois vamos manipular a linha manualmente
         state.map.removeControl(control);
@@ -635,8 +646,9 @@ export function simulateDriverEnRoute(originCoords) {
 
                 // Nova lógica: Motorista chegou ao ponto de origem, agora vai para o destino
                 if (state.currentOrigin && state.currentDestination) {
-                    // Reexibe o pino de destino
-                    addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino');
+                    // Reexibe o pino de destino com o nome formatado
+                    const destinationName = formatDestinationAddressForTooltip(state.currentDestination.data, state.currentOrigin.data);
+                    addOrMoveMarker(state.currentDestination.latlng, 'destination', destinationName);
 
                     // Calcula a rota do motorista (agora no ponto de origem) até o destino
                     const driverToDestinationControl = traceRouteMotoristaDestino(originCoords, state.currentDestination.latlng);
@@ -644,7 +656,7 @@ export function simulateDriverEnRoute(originCoords) {
                     driverToDestinationControl.on('routesfound', (e) => {
                         const finalRoute = e.routes[0];
                         const finalRouteCoords = finalRoute.coordinates;
-                        state.map.fitBounds(finalRoute.coordinates, { padding: [50, 50] });
+                        state.map.fitBounds(finalRoute.coordinates, { padding: [AppConfig.MAP_ZOOM_LEVELS.FIT_BOUNDS_PADDING, AppConfig.MAP_ZOOM_LEVELS.FIT_BOUNDS_PADDING] });
 
                         state.map.removeControl(driverToDestinationControl);
 
@@ -766,5 +778,9 @@ export function stopDriverSimulation() {
         state.setEndCircle(null);
     }
     // O pino de destino não é removido aqui, pois pode ser necessário para a próxima interação do usuário.
+    // No entanto, se ele existir, seu tooltip deve ser desvinculado para evitar referências órfãs.
+    if (state.destinationMarker && state.destinationMarker.getTooltip()) {
+        state.destinationMarker.unbindTooltip();
+    }
     // A lógica de limpeza completa será tratada por clearFieldsAndMap ou clearRouteOnly em app.js
 }

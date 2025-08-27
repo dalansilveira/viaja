@@ -48,6 +48,6 @@ export const AppConfig = {
         USER_LOCATION_GPS: 16, // Zoom para localização do usuário via GPS
         USER_LOCATION_IP_FALLBACK: 10, // Zoom para localização do usuário via IP (fallback)
         MAX_TILE_ZOOM: 19, // Zoom máximo para o tile layer
-        FIT_BOUNDS_PADDING: 50 // Padding para fitBounds
+        FIT_BOUNDS_PADDING: 70 // Padding para fitBounds
     }
 };

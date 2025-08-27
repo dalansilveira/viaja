@@ -194,6 +194,40 @@ export function haversineDistance(coords1, coords2) {
 }
 
 /**
+ * Formata um objeto de local da API para uma string específica de tooltip para o destino.
+ * Formato: "RUA, Nº, BAIRRO" (exibe cidade apenas se diferente da origem).
+ * @param {object} destinationPlace - O objeto de local completo do destino.
+ * @param {object} originPlace - O objeto de local completo da origem (para comparação de cidade).
+ * @returns {string} Uma string de endereço formatada para tooltip do destino.
+ */
+export function formatDestinationAddressForTooltip(destinationPlace, originPlace) {
+    if (!destinationPlace || !destinationPlace.address) return '';
+
+    const destAddress = destinationPlace.address;
+    const originCity = originPlace && originPlace.address ? (originPlace.address.city || originPlace.address.town || originPlace.address.village || '') : '';
+
+    const road = destAddress.road || '';
+    const houseNumber = destAddress.house_number || '';
+    const suburb = destAddress.suburb || destAddress.city_district || '';
+    const city = destAddress.city || destAddress.town || destAddress.village || '';
+
+    let parts = [];
+    if (road) {
+        parts.push(road + (houseNumber ? `, ${houseNumber}` : ''));
+    }
+    if (suburb) {
+        parts.push(suburb);
+    }
+
+    // Adiciona a cidade apenas se for diferente da cidade de origem
+    if (city && normalizeText(city) !== normalizeText(originCity)) {
+        parts.push(city);
+    }
+
+    return parts.join(', ');
+}
+
+/**
  * Normaliza um texto, removendo acentos e convertendo para minúsculas.
  * @param {string} text - O texto a ser normalizado.
  * @returns {string} O texto normalizado.

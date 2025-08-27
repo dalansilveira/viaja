@@ -3,11 +3,12 @@ import { dom } from './dom.js';
 import * as state from './state.js';
 import { saveAppState } from './state.js';
 import { reverseGeocode, fetchAddressSuggestions } from './api.js';
-import { formatPlaceForDisplay, haversineDistance, normalizeText } from './utils.js';
+import { formatPlaceForDisplay, haversineDistance, normalizeText, formatDestinationAddressForTooltip } from './utils.js';
 import { addOrMoveMarker, traceRoute } from './map.js';
 import { saveDestinationToHistory } from './history.js';
 import { saveSuggestionToCache, getHistory, getFavorites } from './firestore.js';
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { AppConfig } from './config.js';
 
 let mapMessageTimeout;
 
@@ -33,7 +34,7 @@ export function refreshMap() {
 
         // Centraliza o mapa com base no estado atual
         if (state.currentOrigin && state.currentDestination) {
-            state.map.fitBounds([state.currentOrigin.latlng, state.currentDestination.latlng], { padding: [50, 50] });
+            state.map.fitBounds([state.currentOrigin.latlng, state.currentDestination.latlng], { padding: [AppConfig.MAP_ZOOM_LEVELS.FIT_BOUNDS_PADDING, AppConfig.MAP_ZOOM_LEVELS.FIT_BOUNDS_PADDING] });
         } else if (state.currentOrigin) {
             state.map.panTo(state.currentOrigin.latlng);
         }
@@ -408,7 +409,8 @@ function setDestination(place, inputEl, suggestionsEl) {
     inputEl.dataset.lng = latlng.lng;
 
     state.setCurrentDestination({ latlng, data: place });
-    addOrMoveMarker(latlng, 'destination', 'Destino');
+    const destinationName = formatDestinationAddressForTooltip(place, state.currentOrigin.data);
+    addOrMoveMarker(latlng, 'destination', destinationName);
     dom.destinationInput.closest('.input-group').classList.add('input-filled');
 
     saveAppState();
@@ -417,6 +419,7 @@ function setDestination(place, inputEl, suggestionsEl) {
         requestRide();
     }
 
+    dom.mapMessage.style.display = 'none'; // Oculta a dica quando o destino é definido por sugestão
     refreshMap();
 }
 
@@ -486,9 +489,12 @@ function setupTabs() {
 export function setSelectionButtonState(type) {
     if (dom.selectDestinationButton) {
         dom.selectDestinationButton.classList.remove('selection-active');
+        dom.mapMessage.style.display = 'none'; // Oculta por padrão
 
         if (type === 'destination') {
             dom.selectDestinationButton.classList.add('selection-active');
+            dom.mapMessage.textContent = 'Clique no mapa para selecionar o destino';
+            dom.mapMessage.style.display = 'block';
         }
     }
 }
