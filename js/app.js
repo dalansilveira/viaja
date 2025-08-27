@@ -301,8 +301,8 @@ function setupAppEventListeners() {
 
     // Força a abertura do teclado em dispositivos móveis de forma agressiva
     dom.destinationInput.addEventListener('touchstart', (e) => {
-        // Impede que outros listeners (como o do Leaflet) sejam acionados
-        e.stopImmediatePropagation();
+        // Apenas foca no input, permitindo que outros listeners sejam acionados.
+        // e.stopImmediatePropagation(); // Removido para permitir outros listeners
         dom.destinationInput.focus();
     }, { capture: true }); // Usa a fase de captura para ser o primeiro a receber o evento
 
@@ -666,6 +666,8 @@ async function initializeApp() {
     if (panel && !panel.classList.contains('open')) {
         dom.togglePanelButton.click();
     }
+
+    
     dom.destinationInput.focus();
 }
 
