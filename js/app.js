@@ -346,10 +346,10 @@ function setupAppEventListeners() {
     // Adiciona o listener de click para aceitar a sugestão in-line
     dom.destinationInput.addEventListener('click', (e) => {
         // Se o ghost text estiver visível (indicando uma sugestão in-line), aceita a sugestão
-        if (dom.autocompleteGhost.style.display === 'block' && currentInlineSuggestion) {
+       /* if (dom.autocompleteGhost.style.display === 'block' && currentInlineSuggestion) {
             e.preventDefault(); // Previne o comportamento padrão do clique, se necessário
             acceptInlineSuggestion();
-        }
+        }*/
         dom.destinationInput.focus();
     });
 
@@ -639,6 +639,7 @@ async function initializeMapAndLocation(isDark) {
     }
 
     dom.loadingModal.classList.add('hidden'); // Esconde a modal de carregamento
+    dom.destinationInput.click();
     dom.destinationInput.focus();
 }
 
