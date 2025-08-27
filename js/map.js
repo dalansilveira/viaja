@@ -166,11 +166,13 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
             // Lógica para toque longo (hold) no marcador de origem
             let holdTimer;
             const HOLD_DURATION = 700; // ms
+            let currentEvent = null; // Adicione esta linha para armazenar o evento
 
             const markerElement = marker.getElement();
             if (markerElement) {
                 const startHold = (e) => {
                     e.stopPropagation(); // Impede que o evento chegue ao mapa
+                    currentEvent = e; // Armazene o evento original
                     // O marcador já é criado como não arrastável, então não precisamos desabilitá-lo aqui.
                     holdTimer = setTimeout(() => {
                         marker.dragging.enable();
@@ -184,6 +186,11 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
                         // Remove a animação de ondas
                         const container = markerElement.querySelector('.marker-container');
                         if (container) container.classList.remove('tracking-active');
+
+                        // Adicione esta lógica para iniciar o arrasto imediatamente
+                        if (marker.dragging && marker.dragging._draggable && currentEvent) {
+                            marker.dragging._draggable._onDown(currentEvent);
+                        }
                     }, HOLD_DURATION);
                 };
 
@@ -198,6 +205,7 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
 
                 const endHold = () => {
                     clearTimeout(holdTimer);
+                    currentEvent = null; // Limpe o evento ao final do hold
                     markerElement.classList.remove('draggable-active');
                     // A lógica de reabilitação do arrasto do mapa e da animação será tratada no dragend
                 };
