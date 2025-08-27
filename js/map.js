@@ -462,14 +462,21 @@ export function simulateDriverEnRoute(originCoords) {
         state.setEndCircle(null);
     }
 
-    // Oculta o pino de destino
-    if (state.destinationMarker) {
-        state.map.removeLayer(state.destinationMarker);
-    }
+    // Não remove o pino de destino aqui, ele será reexibido quando o motorista chegar à origem.
+    // if (state.destinationMarker) {
+    //     state.map.removeLayer(state.destinationMarker);
+    // }
 
-    // 1. Ponto de partida aleatório para o motorista
-    const startLat = originCoords.lat + (Math.random() - 0.5) * 0.05;
-    const startLng = originCoords.lng + (Math.random() - 0.5) * 0.05;
+    // 1. Ponto de partida aleatório para o motorista (até 2km de distância)
+    const maxDistanceKm = 2; // Distância máxima em km
+    const maxDistanceDegrees = maxDistanceKm / 111.32; // Aproximadamente 1 grau de latitude = 111.32 km
+
+    const angle = Math.random() * 2 * Math.PI; // Ângulo aleatório em radianos
+    const distanceFactor = Math.random(); // Fator para variar a distância de 0 a 1
+    const randomDistanceDegrees = distanceFactor * maxDistanceDegrees;
+
+    const startLat = originCoords.lat + randomDistanceDegrees * Math.cos(angle);
+    const startLng = originCoords.lng + randomDistanceDegrees * Math.sin(angle) / Math.cos(originCoords.lat * Math.PI / 180); // Ajuste para longitude
     const driverStartCoords = L.latLng(startLat, startLng);
 
     createDriverMarker(driverStartCoords);
@@ -499,7 +506,7 @@ export function simulateDriverEnRoute(originCoords) {
             weight: 5
         }).addTo(state.map);
 
-        const duration = 180000; // 3 minutos
+        const duration = Math.random() * 40000; // Duração variável até 40 segundos (40.000 ms)
         let startTime = null;
 
         function animate(timestamp) {
@@ -528,6 +535,89 @@ export function simulateDriverEnRoute(originCoords) {
                 if (driverRoutePolyline) {
                     state.map.removeLayer(driverRoutePolyline);
                 }
+
+                // Nova lógica: Motorista chegou ao ponto de origem, agora vai para o destino
+                if (state.currentOrigin && state.currentDestination) {
+                    // Reexibe o pino de destino
+                    addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino');
+
+                    const isDarkMode = document.body.classList.contains('dark');
+                    const routeColor = isDarkMode ? '#FFD700' : '#3b82f6';
+                    const casingColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.6)';
+
+                    // Calcula a rota do motorista (agora no ponto de origem) até o destino
+                    const driverToDestinationControl = L.Routing.control({
+                        waypoints: [L.latLng(originCoords.lat, originCoords.lng), L.latLng(state.currentDestination.latlng.lat, state.currentDestination.latlng.lng)],
+                        createMarker: () => null,
+                        lineOptions: {
+                            styles: [
+                                { color: casingColor, opacity: 1, weight: 7 },
+                                { color: routeColor, weight: 4, opacity: 1 }
+                            ]
+                        },
+                        show: false
+                    }).addTo(state.map);
+
+                    driverToDestinationControl.on('routesfound', (e) => {
+                        const finalRoute = e.routes[0];
+                        const finalRouteCoords = finalRoute.coordinates;
+                        state.map.fitBounds(finalRoute.coordinates, { padding: [50, 50] });
+
+                        state.map.removeControl(driverToDestinationControl);
+
+                        const finalRoutePolyline = L.polyline(finalRouteCoords, {
+                            color: routeColor, // Usar a cor da rota definida
+                            opacity: 1,
+                            weight: 4
+                        }).addTo(state.map);
+
+                        const finalDuration = Math.random() * 40000; // Duração variável até 40 segundos (40.000 ms)
+                        let finalStartTime = null;
+
+                        function animateFinalRoute(timestamp) {
+                            if (!finalStartTime) finalStartTime = timestamp;
+                            const finalProgress = (timestamp - finalStartTime) / finalDuration;
+
+                            if (finalProgress < 1) {
+                                const finalCurrentIndex = Math.floor(finalProgress * (finalRouteCoords.length - 1));
+                                const finalNewPos = finalRouteCoords[finalCurrentIndex];
+
+                                if (state.driverMarker) {
+                                    state.driverMarker.setLatLng(finalNewPos);
+                                }
+
+                                const finalRemainingRoute = finalRouteCoords.slice(finalCurrentIndex);
+                                finalRoutePolyline.setLatLngs(finalRemainingRoute);
+
+                                animationFrameId = requestAnimationFrame(animateFinalRoute);
+                            } else {
+                                if (state.driverMarker) {
+                                    state.driverMarker.setLatLng(L.latLng(state.currentDestination.latlng.lat, state.currentDestination.latlng.lng));
+                                }
+                                showPushNotification('Você chegou ao seu destino!', 'success');
+                                if (finalRoutePolyline) {
+                                    state.map.removeLayer(finalRoutePolyline);
+                                }
+                                // Mover o pin de origem para o destino final
+                                if (state.originMarker && state.currentDestination) {
+                                    state.originMarker.setLatLng(state.currentDestination.latlng);
+                                    // Atualizar o estado de origem para refletir a nova posição
+                                    state.setCurrentOrigin(state.currentDestination);
+                                }
+                                // Remover o pin de destino
+                                if (state.destinationMarker) {
+                                    state.map.removeLayer(state.destinationMarker);
+                                    state.setDestinationMarker(null);
+                                }
+                                // Parar a simulação do motorista (remove o marcador do motorista)
+                                stopDriverSimulation();
+                                showPushNotification('Viagem concluída!', 'success');
+                                showPage('page1'); // Volta para a página inicial
+                            }
+                        }
+                        animationFrameId = requestAnimationFrame(animateFinalRoute);
+                    });
+                }
             }
         }
         animationFrameId = requestAnimationFrame(animate);
@@ -543,5 +633,19 @@ export function stopDriverSimulation() {
         state.map.removeLayer(state.driverMarker);
         state.setDriverMarker(null);
     }
-    // Adicione aqui a lógica para remover a rota do motorista se necessário
+    // Garante que a rota principal seja removida se a simulação for parada manualmente
+    if (state.routeControl) {
+        state.map.removeControl(state.routeControl);
+        state.setRouteControl(null);
+    }
+    if (state.startCircle) {
+        state.map.removeLayer(state.startCircle);
+        state.setStartCircle(null);
+    }
+    if (state.endCircle) {
+        state.map.removeLayer(state.endCircle);
+        state.setEndCircle(null);
+    }
+    // O pino de destino não é removido aqui, pois pode ser necessário para a próxima interação do usuário.
+    // A lógica de limpeza completa será tratada por clearFieldsAndMap ou clearRouteOnly em app.js
 }
