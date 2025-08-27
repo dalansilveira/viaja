@@ -21,4 +21,18 @@ export const AppConfig = {
 
     // Chave da API para o serviço OpenCageData
     OPENCAGE_API_KEY: 'f9ac031b19484703bfb57a553a0d9c4b',
+
+    // Cores para o mapa e rotas
+    MAP_THEME_COLORS: {
+        light: {
+            mainRoute: { routeColor: '#3b82f6', casingColor: 'rgba(0, 0, 0, 0.6)' }, // Azul / Preto
+            driverToOrigin: { routeColor: '#8b5cf6', casingColor: 'rgba(107, 114, 128, 0.6)' }, // Purple / Dark Gray
+            driverToDestination: { routeColor: '#f97316', casingColor: 'rgba(107, 114, 128, 0.6)' } // Orange / Dark Gray
+        },
+        dark: {
+            mainRoute: { routeColor: '#FFD700', casingColor: 'rgba(255, 255, 255, 0.8)' }, // Dourado / Branco
+            driverToOrigin: { routeColor: '#06b6d4', casingColor: 'rgba(209, 213, 219, 0.8)' }, // Cyan / Light Gray
+            driverToDestination: { routeColor: '#10b981', casingColor: 'rgba(209, 213, 219, 0.8)' } // Green / Light Gray
+        }
+    },
 };

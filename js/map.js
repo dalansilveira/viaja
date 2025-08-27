@@ -1,6 +1,7 @@
+import { AppConfig } from './config.js';
 import * as state from './state.js';
 import { dom } from './dom.js';
-import { handleMapClick, showPushNotification, showPage } from './ui.js';
+import { handleMapClick, showPushNotification, showPage, showRouteProgressModal, hideRouteProgressModal } from './ui.js';
 import { formatTime, estimateFare, formatPlaceForDisplay, formatAddressForTooltip, debounce } from './utils.js';
 import { reverseGeocode, getUserLocation } from './api.js';
 
@@ -284,6 +285,8 @@ export function traceRoute(fitBounds = false) {
         return;
     }
     
+    showRouteProgressModal(); // Exibe a modal de progresso
+
     const waypoints = [
         L.latLng(state.currentOrigin.latlng.lat, state.currentOrigin.latlng.lng),
         L.latLng(state.currentDestination.latlng.lat, state.currentDestination.latlng.lng)
@@ -294,12 +297,14 @@ export function traceRoute(fitBounds = false) {
     addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino'); // Não precisa de nome para tooltip aqui
 
     if (waypoints.length < 2) {
+        hideRouteProgressModal(); // Oculta a modal se não houver waypoints suficientes
         return;
     }
 
     const isDarkMode = document.body.classList.contains('dark');
-    const routeColor = isDarkMode ? '#FFD700' : '#3b82f6';
-    const casingColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.6)';
+    const themeColors = AppConfig.MAP_THEME_COLORS[isDarkMode ? 'dark' : 'light'];
+    const routeColor = themeColors.mainRoute.routeColor;
+    const casingColor = themeColors.mainRoute.casingColor;
 
     const control = L.Routing.control({
         waypoints: waypoints,
@@ -318,6 +323,7 @@ export function traceRoute(fitBounds = false) {
     }).addTo(state.map);
 
     control.on('routesfound', function(e) {
+        hideRouteProgressModal(); // Oculta a modal quando a rota é encontrada
         const route = e.routes[0];
         const distanceMeters = route.summary.totalDistance;
         const timeSeconds = route.summary.totalTime;
@@ -367,6 +373,12 @@ export function traceRoute(fitBounds = false) {
             dom.togglePanelButton.click();
         }
         showPage('page3');
+    });
+
+    control.on('routingerror', function(e) {
+        hideRouteProgressModal(); // Oculta a modal em caso de erro
+        console.error("Erro ao traçar rota:", e.error.message);
+        showPushNotification("Não foi possível traçar a rota. Tente novamente.", "error");
     });
 
     state.setRouteControl(control);
@@ -446,6 +458,60 @@ function createDriverMarker(coords) {
     state.setDriverMarker(marker);
 }
 
+/**
+ * Traça a rota do motorista (ponto de partida aleatório) até a origem do usuário.
+ * @param {object} driverStartCoords - Coordenadas de início do motorista.
+ * @param {object} originCoords - Coordenadas de origem do usuário.
+ * @returns {L.Routing.Control} O controle de rota do Leaflet.
+ */
+export function traceRouteMotoristaOrigem(driverStartCoords, originCoords) {
+    const isDarkMode = document.body.classList.contains('dark');
+    const themeColors = AppConfig.MAP_THEME_COLORS[isDarkMode ? 'dark' : 'light'];
+    const routeColor = themeColors.driverToOrigin.routeColor;
+    const casingColor = themeColors.driverToOrigin.casingColor;
+
+    const control = L.Routing.control({
+        waypoints: [driverStartCoords, L.latLng(originCoords.lat, originCoords.lng)],
+        createMarker: () => null,
+        lineOptions: {
+            styles: [
+                { color: casingColor, opacity: 1, weight: 7 },
+                { color: routeColor, weight: 4, opacity: 1 }
+            ]
+        },
+        show: false
+    }).addTo(state.map);
+
+    return control;
+}
+
+/**
+ * Traça a rota da origem do usuário até o destino final.
+ * @param {object} originCoords - Coordenadas de origem do usuário.
+ * @param {object} destinationCoords - Coordenadas do destino final.
+ * @returns {L.Routing.Control} O controle de rota do Leaflet.
+ */
+export function traceRouteMotoristaDestino(originCoords, destinationCoords) {
+    const isDarkMode = document.body.classList.contains('dark');
+    const themeColors = AppConfig.MAP_THEME_COLORS[isDarkMode ? 'dark' : 'light'];
+    const routeColor = themeColors.driverToDestination.routeColor;
+    const casingColor = themeColors.driverToDestination.casingColor;
+
+    const control = L.Routing.control({
+        waypoints: [L.latLng(originCoords.lat, originCoords.lng), L.latLng(destinationCoords.lat, destinationCoords.lng)],
+        createMarker: () => null,
+        lineOptions: {
+            styles: [
+                { color: casingColor, opacity: 1, weight: 7 },
+                { color: routeColor, weight: 4, opacity: 1 }
+            ]
+        },
+        show: false
+    }).addTo(state.map);
+
+    return control;
+}
+
 export function simulateDriverEnRoute(originCoords) {
     // Remove a rota principal (usuário -> destino) para evitar conflitos
     if (state.routeControl) {
@@ -483,15 +549,13 @@ export function simulateDriverEnRoute(originCoords) {
 
     createDriverMarker(driverStartCoords);
 
+    const isDarkMode = document.body.classList.contains('dark');
+    const themeColors = AppConfig.MAP_THEME_COLORS[isDarkMode ? 'dark' : 'light'];
+    const routeColor = themeColors.driverToOrigin.routeColor;
+    const casingColor = themeColors.driverToOrigin.casingColor;
+
     // 2. Calcula a rota do motorista até o usuário
-    const control = L.Routing.control({
-        waypoints: [driverStartCoords, L.latLng(originCoords.lat, originCoords.lng)],
-        createMarker: () => null,
-        lineOptions: {
-            styles: [{color: '#22c55e', opacity: 0.8, weight: 5}]
-        },
-        show: false
-    }).addTo(state.map);
+    const control = traceRouteMotoristaOrigem(driverStartCoords, originCoords);
 
     control.on('routesfound', (e) => {
         const route = e.routes[0];
@@ -501,11 +565,19 @@ export function simulateDriverEnRoute(originCoords) {
         // Remove o controle de rota original, pois vamos manipular a linha manualmente
         state.map.removeControl(control);
 
+        // Cria a polilinha de casing (borda)
+        const driverCasingPolyline = L.polyline(routeCoords, {
+            color: casingColor,
+            weight: 7,
+            opacity: 1,
+            pane: 'overlayPane' // Garante que a borda fique por baixo
+        }).addTo(state.map);
+
         // Cria nossa própria polilinha para que possamos atualizá-la
         const driverRoutePolyline = L.polyline(routeCoords, {
-            color: '#22c55e',
-            opacity: 0.8,
-            weight: 5
+            color: routeColor,
+            weight: 4,
+            opacity: 1
         }).addTo(state.map);
 
         const duration = Math.random() * 40000; // Duração variável até 40 segundos (40.000 ms)
@@ -527,6 +599,7 @@ export function simulateDriverEnRoute(originCoords) {
                 // Cria a nova rota, mais curta
                 const remainingRoute = routeCoords.slice(currentIndex);
                 driverRoutePolyline.setLatLngs(remainingRoute);
+                driverCasingPolyline.setLatLngs(remainingRoute); // Atualiza também a polilinha de casing
 
                 animationFrameId = requestAnimationFrame(animate);
             } else {
@@ -536,6 +609,9 @@ export function simulateDriverEnRoute(originCoords) {
                 showPushNotification('Seu motorista chegou!', 'success');
                 if (driverRoutePolyline) {
                     state.map.removeLayer(driverRoutePolyline);
+                }
+                if (driverCasingPolyline) { // Remove a polilinha de casing também
+                    state.map.removeLayer(driverCasingPolyline);
                 }
                 // Ocultar o pin de origem quando o motorista chega
                 if (state.originMarker) {
@@ -548,22 +624,8 @@ export function simulateDriverEnRoute(originCoords) {
                     // Reexibe o pino de destino
                     addOrMoveMarker(state.currentDestination.latlng, 'destination', 'Destino');
 
-                    const isDarkMode = document.body.classList.contains('dark');
-                    const routeColor = isDarkMode ? '#FFD700' : '#3b82f6';
-                    const casingColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.6)';
-
                     // Calcula a rota do motorista (agora no ponto de origem) até o destino
-                    const driverToDestinationControl = L.Routing.control({
-                        waypoints: [L.latLng(originCoords.lat, originCoords.lng), L.latLng(state.currentDestination.latlng.lat, state.currentDestination.latlng.lng)],
-                        createMarker: () => null,
-                        lineOptions: {
-                            styles: [
-                                { color: casingColor, opacity: 1, weight: 7 },
-                                { color: routeColor, weight: 4, opacity: 1 }
-                            ]
-                        },
-                        show: false
-                    }).addTo(state.map);
+                    const driverToDestinationControl = traceRouteMotoristaDestino(originCoords, state.currentDestination.latlng);
 
                     driverToDestinationControl.on('routesfound', (e) => {
                         const finalRoute = e.routes[0];
@@ -573,9 +635,17 @@ export function simulateDriverEnRoute(originCoords) {
                         state.map.removeControl(driverToDestinationControl);
 
                         const finalRoutePolyline = L.polyline(finalRouteCoords, {
-                            color: routeColor, // Usar a cor da rota definida
+                            color: routeColor, // Cor principal da rota
+                            weight: 4,
                             opacity: 1,
-                            weight: 4
+                        }).addTo(state.map);
+
+                        // Cria a polilinha de casing (borda)
+                        const finalCasingPolyline = L.polyline(finalRouteCoords, {
+                            color: casingColor,
+                            weight: 7,
+                            opacity: 1,
+                            pane: 'overlayPane' // Garante que a borda fique por baixo
                         }).addTo(state.map);
 
                         const finalDuration = Math.random() * 40000; // Duração variável até 40 segundos (40.000 ms)
@@ -595,6 +665,7 @@ export function simulateDriverEnRoute(originCoords) {
 
                                 const finalRemainingRoute = finalRouteCoords.slice(finalCurrentIndex);
                                 finalRoutePolyline.setLatLngs(finalRemainingRoute);
+                                finalCasingPolyline.setLatLngs(finalRemainingRoute);
 
                                 animationFrameId = requestAnimationFrame(animateFinalRoute);
                             } else {
@@ -604,6 +675,9 @@ export function simulateDriverEnRoute(originCoords) {
                                 showPushNotification('Você chegou ao seu destino!', 'success');
                                 if (finalRoutePolyline) {
                                     state.map.removeLayer(finalRoutePolyline);
+                                }
+                                if (finalCasingPolyline) {
+                                    state.map.removeLayer(finalCasingPolyline);
                                 }
                                 // Mover o pin de origem para o destino final
                                 // Mover o pin de origem para o destino final

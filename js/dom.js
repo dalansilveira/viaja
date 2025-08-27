@@ -79,5 +79,6 @@ export const dom = {
     confirmHouseNumberButton: document.getElementById('confirm-house-number-button'),
     cancelHouseNumberButton: document.getElementById('cancel-house-number-button'),
     autocompleteGhost: document.getElementById('autocomplete-ghost'),
-    loadingModal: document.getElementById('loading-modal') // Adicionado para a nova modal de carregamento
+    loadingModal: document.getElementById('loading-modal'),
+    routeProgressModal: document.getElementById('route-progress-modal')
 };

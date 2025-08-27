@@ -427,6 +427,20 @@ export function toggleGpsModal(show) {
     dom.gpsModal.classList.toggle('visible', show);
 }
 
+/**
+ * Exibe a modal de progresso da rota.
+ */
+export function showRouteProgressModal() {
+    dom.routeProgressModal.classList.remove('hidden');
+}
+
+/**
+ * Oculta a modal de progresso da rota.
+ */
+export function hideRouteProgressModal() {
+    dom.routeProgressModal.classList.add('hidden');
+}
+
 export function toggleTheme() {
     const isDark = document.body.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');

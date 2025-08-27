@@ -486,6 +486,15 @@ body.dark .notification-close:hover {
 #loading-modal .loader {
     border-top-color: #fff; /* Cor branca para o spinner no modal de carregamento */
 }
+
+/* Estilos para o Route Progress Modal */
+#route-progress-modal .loader {
+    width: 60px;
+    height: 60px;
+    border-width: 6px;
+    border-top-color: #fff; /* Cor branca para o spinner no modal de progresso de rota */
+}
+
 @-webkit-keyframes spin {
     0% { -webkit-transform: rotate(0deg); }
     100% { -webkit-transform: rotate(360deg); }
