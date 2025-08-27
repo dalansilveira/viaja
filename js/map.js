@@ -459,15 +459,24 @@ export async function updateUserLocationOnce() { // Adicionado 'async' aqui
 }); // Fecha a Promise
 }
 
-function createDriverMarker(coords) {
-    const driverIconHtml = `
-        <div class="relative flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-800 dark:text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8a1 1 0 001 1h1a1 1 0 001-1v-1h12v1a1 1 0 001 1h1a1 1 0 001-1v-8l-2.08-5.99zM6.5 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm11 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM5 10l1.5-4.5h11L19 10H5z"/>
-            </svg>
-        </div>`;
+function createDriverMarker(coords, vehicleType = 'car') {
+    let iconHtml = '';
+    if (vehicleType === 'Moto') {
+        iconHtml = `
+            <div class="relative flex items-center justify-center">
+                <img src="imgs/moto.svg" class="w-10 h-10" alt="Moto">
+            </div>`;
+    } else {
+        iconHtml = `
+            <div class="relative flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-gray-800 dark:text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8a1 1 0 001 1h1a1 1 0 001-1v-1h12v1a1 1 0 001 1h1a1 1 0 001-1v-8l-2.08-5.99zM6.5 16a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm11 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM5 10l1.5-4.5h11L19 10H5z"/>
+                </svg>
+            </div>`;
+    }
+    
     const driverIcon = L.divIcon({
-        html: driverIconHtml,
+        html: iconHtml,
         className: 'leaflet-div-icon',
         iconSize: [40, 40],
         iconAnchor: [20, 20]
@@ -533,7 +542,7 @@ export function traceRouteMotoristaDestino(originCoords, destinationCoords) {
     return control;
 }
 
-export function simulateDriverEnRoute(originCoords) {
+export function simulateDriverEnRoute(originCoords, vehicleType = 'car') {
     // Remove a rota principal (usuário -> destino) para evitar conflitos
     if (state.routeControl) {
         state.routeControl.setWaypoints([]); // Limpa os waypoints antes de remover o controle
@@ -572,7 +581,7 @@ export function simulateDriverEnRoute(originCoords) {
     const startLng = originCoords.lng + randomDistanceDegrees * Math.sin(angle) / Math.cos(originCoords.lat * Math.PI / 180); // Ajuste para longitude
     const driverStartCoords = L.latLng(startLat, startLng);
 
-    createDriverMarker(driverStartCoords);
+    createDriverMarker(driverStartCoords, vehicleType);
 
     const isDarkMode = document.body.classList.contains('dark');
     const themeColors = AppConfig.MAP_THEME_COLORS[isDarkMode ? 'dark' : 'light'];

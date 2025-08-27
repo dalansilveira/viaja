@@ -146,7 +146,7 @@ function setupAppEventListeners() {
             simRunning = false;
         } else {
             if (state.currentOrigin) {
-                simulateDriverEnRoute(state.currentOrigin.latlng);
+                simulateDriverEnRoute(state.currentOrigin.latlng, state.tripData.vehicle);
                 simRunning = true;
             } else {
                 showPushNotification('Defina uma origem primeiro.', 'warning');
@@ -268,7 +268,7 @@ function setupAppEventListeners() {
 
                 // Inicia a simulação do motorista no mapa
                 if (state.currentOrigin) {
-                    simulateDriverEnRoute(state.currentOrigin.latlng);
+                    simulateDriverEnRoute(state.currentOrigin.latlng, state.tripData.vehicle);
                 }
             }, 2000);
         } else {
