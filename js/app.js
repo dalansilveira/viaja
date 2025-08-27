@@ -639,6 +639,7 @@ async function initializeMapAndLocation(isDark) {
     }
 
     dom.loadingModal.classList.add('hidden'); // Esconde a modal de carregamento
+    dom.destinationInput.focus();
 }
 
 async function initializeApp() {
