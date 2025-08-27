@@ -265,6 +265,8 @@ export function addOrMoveMarker(coords, type, name, isDraggable = true) {
  */
 export function traceRoute(fitBounds = false) {
     if (state.routeControl) {
+        // Limpa os waypoints para que a biblioteca remova suas próprias linhas antes de remover o controle
+        state.routeControl.setWaypoints([]);
         state.map.removeControl(state.routeControl);
         state.setRouteControl(null);
     }
@@ -515,6 +517,7 @@ export function traceRouteMotoristaDestino(originCoords, destinationCoords) {
 export function simulateDriverEnRoute(originCoords) {
     // Remove a rota principal (usuário -> destino) para evitar conflitos
     if (state.routeControl) {
+        state.routeControl.setWaypoints([]); // Limpa os waypoints antes de remover o controle
         state.map.removeControl(state.routeControl);
         state.setRouteControl(null);
     }
@@ -580,7 +583,7 @@ export function simulateDriverEnRoute(originCoords) {
             opacity: 1
         }).addTo(state.map);
 
-        const duration = Math.random() * 40000; // Duração variável até 40 segundos (40.000 ms)
+        const duration = /*Math.random() **/ AppConfig.ROUTE_ANIMATION_DURATIONS.driverToOriginMax; // Duração variável até o máximo configurado
         let startTime = null;
 
         function animate(timestamp) {
@@ -648,7 +651,7 @@ export function simulateDriverEnRoute(originCoords) {
                             pane: 'overlayPane' // Garante que a borda fique por baixo
                         }).addTo(state.map);
 
-                        const finalDuration = Math.random() * 40000; // Duração variável até 40 segundos (40.000 ms)
+                        const finalDuration = /*Math.random() **/  AppConfig.ROUTE_ANIMATION_DURATIONS.driverToDestinationMax; // Duração variável até o máximo configurado
                         let finalStartTime = null;
 
                         function animateFinalRoute(timestamp) {
@@ -737,6 +740,7 @@ export function stopDriverSimulation() {
     }
     // Garante que a rota principal seja removida se a simulação for parada manualmente
     if (state.routeControl) {
+        state.routeControl.setWaypoints([]); // Limpa os waypoints antes de remover o controle
         state.map.removeControl(state.routeControl);
         state.setRouteControl(null);
     }

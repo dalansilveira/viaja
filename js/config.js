@@ -30,9 +30,15 @@ export const AppConfig = {
             driverToDestination: { routeColor: '#f97316', casingColor: 'rgba(107, 114, 128, 0.6)' } // Orange / Dark Gray
         },
         dark: {
-            mainRoute: { routeColor: '#FFD700', casingColor: 'rgba(255, 255, 255, 0.8)' }, // Dourado / Branco
+            mainRoute: { routeColor: '#FFD700', casingColor: 'rgba(255, 255, 255, 0.8)' }, // Gold / White
             driverToOrigin: { routeColor: '#06b6d4', casingColor: 'rgba(209, 213, 219, 0.8)' }, // Cyan / Light Gray
             driverToDestination: { routeColor: '#10b981', casingColor: 'rgba(209, 213, 219, 0.8)' } // Green / Light Gray
         }
     },
+
+    // Tempos de animação de rotas (em ms)
+    ROUTE_ANIMATION_DURATIONS: {
+        driverToOriginMax: 20000, // Duração máxima para a rota do motorista até a origem (40 segundos)
+        driverToDestinationMax: 20000 // Duração máxima para a rota da origem até o destino (40 segundos)
+    }
 };
