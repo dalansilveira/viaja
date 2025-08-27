@@ -338,6 +338,9 @@ function setupAppEventListeners() {
         // Comportamento original mantido para todos os outros casos.
         const abortController = new AbortController();
         displayAddressSuggestions(e.target, dom.destinationSuggestions, abortController.signal);
+
+        // Dispara um evento 'input' para garantir que o ghost text seja atualizado no foco
+        dom.destinationInput.dispatchEvent(new Event('input'));
     });
 
     // Adiciona o listener de click para aceitar a sugestão in-line
