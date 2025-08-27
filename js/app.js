@@ -639,8 +639,6 @@ async function initializeMapAndLocation(isDark) {
     }
 
     dom.loadingModal.classList.add('hidden'); // Esconde a modal de carregamento
-    dom.destinationInput.click();
-    dom.destinationInput.focus();
 }
 
 async function initializeApp() {
@@ -677,14 +675,14 @@ async function initializeApp() {
         localStorage.setItem('hasVisited', 'true');
     }
 
-    // Garante que o painel esteja aberto e foca no campo de destino após a inicialização
- /*   const panel = dom.collapsiblePanel;
-    if (panel && !panel.classList.contains('open')) {
-        dom.togglePanelButton.click();
-    }*/
-
-    dom.destinationInput.click();
-    dom.destinationInput.focus();
+    // Tenta focar e abrir o teclado virtual no campo de destino
+    setTimeout(() => {
+        dom.destinationInput.focus();
+        if (isMobileDevice()) {
+            // Em alguns dispositivos móveis, um clique programático pode ajudar a abrir o teclado
+            dom.destinationInput.click();
+        }
+    }, 500); // Pequeno atraso para garantir que o DOM esteja pronto e o painel aberto
 }
 
 // A função window.onload foi movida para o final do arquivo para garantir que todas as funções estejam definidas.
