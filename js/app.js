@@ -634,7 +634,7 @@ async function initializeApp() {
     setupPWA();
 
     // Impede que o Leaflet "capture" os eventos de clique nos contêineres de input
-    const inputContainers = [
+  /*  const inputContainers = [
         document.getElementById('destination-container'),
         document.getElementById('panel-container')
     ];
@@ -643,7 +643,7 @@ async function initializeApp() {
             L.DomEvent.disableClickPropagation(container);
             L.DomEvent.disableScrollPropagation(container);
         }
-    });
+    });*/
 
     // Desativa a restauração de estado para evitar problemas
     localStorage.removeItem('viaja_appState');
