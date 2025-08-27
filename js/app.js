@@ -636,12 +636,35 @@ async function initializeMapAndLocation(isDark) {
         const hasInitialFocusApplied = localStorage.getItem('hasInitialFocusApplied');
         if (!hasInitialFocusApplied) {
             setTimeout(() => {
-                dom.destinationInput.focus();
-                if (isMobileDevice()) {
-                    dom.destinationInput.click();
+                // Abre o painel e mostra a página 1 se ainda não estiver aberto
+                const panel = dom.collapsiblePanel;
+                if (panel && !panel.classList.contains('open')) {
+                    dom.togglePanelButton.click();
+                }
+                showPage('page1'); // Garante que a página inicial do painel esteja visível
+
+                // Tenta focar e abrir o teclado virtual no campo de destino
+                console.log('Tentando focar e abrir teclado no campo de destino...');
+                if (dom.destinationInput && !dom.destinationInput.disabled && !dom.destinationInput.hidden) {
+                    dom.destinationInput.focus(); // Tenta focar primeiro
+                    if (isMobileDevice()) {
+                        // Tenta simular um touchstart para "forçar" a abertura do teclado
+                        const touchEvent = new TouchEvent('touchstart', {
+                            touches: [{ clientX: 0, clientY: 0 }],
+                            targetTouches: [{ clientX: 0, clientY: 0 }],
+                            changedTouches: [{ clientX: 0, clientY: 0 }],
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        dom.destinationInput.dispatchEvent(touchEvent);
+                        // Um clique adicional pode ser útil em alguns casos, mesmo após o touchstart
+                        dom.destinationInput.click();
+                    }
+                } else {
+                    console.warn('Campo de destino não está disponível, desabilitado ou oculto. Não foi possível focar.');
                 }
                 localStorage.setItem('hasInitialFocusApplied', 'true');
-            }, 500);
+            }, 750); // Aumenta o atraso para dar mais tempo ao DOM e à UI para estabilizar
         }
 
     } else {
@@ -680,11 +703,6 @@ async function initializeApp() {
     // Verifica se é a primeira visita
     const hasVisited = localStorage.getItem('hasVisited');
     if (!hasVisited) {
-        const panel = dom.collapsiblePanel;
-        if (panel && !panel.classList.contains('open')) {
-            dom.togglePanelButton.click();
-        }
-        showPage('page1');
         localStorage.setItem('hasVisited', 'true');
     }
 
