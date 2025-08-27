@@ -631,6 +631,19 @@ async function initializeMapAndLocation(isDark) {
     if (navigator.geolocation) {
         await updateUserLocationOnce(); // Espera a localização ser atualizada
         // Se ainda não tivermos uma origem definida, o rastreamento cuidará disso
+
+        // Lógica para focar no campo de destino apenas na primeira vez
+        const hasInitialFocusApplied = localStorage.getItem('hasInitialFocusApplied');
+        if (!hasInitialFocusApplied) {
+            setTimeout(() => {
+                dom.destinationInput.focus();
+                if (isMobileDevice()) {
+                    dom.destinationInput.click();
+                }
+                localStorage.setItem('hasInitialFocusApplied', 'true');
+            }, 500);
+        }
+
     } else {
         // Se não houver geolocalização e não foi possível encontrar a localização por outros meios, mostra o modal
         if (initialZoom === 2) { // Isso significa que estamos na localização genérica 0,0
@@ -675,14 +688,6 @@ async function initializeApp() {
         localStorage.setItem('hasVisited', 'true');
     }
 
-    // Tenta focar e abrir o teclado virtual no campo de destino
-    setTimeout(() => {
-        dom.destinationInput.focus();
-        if (isMobileDevice()) {
-            // Em alguns dispositivos móveis, um clique programático pode ajudar a abrir o teclado
-            dom.destinationInput.click();
-        }
-    }, 500); // Pequeno atraso para garantir que o DOM esteja pronto e o painel aberto
 }
 
 // A função window.onload foi movida para o final do arquivo para garantir que todas as funções estejam definidas.
