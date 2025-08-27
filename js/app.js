@@ -661,7 +661,11 @@ async function initializeApp() {
         localStorage.setItem('hasVisited', 'true');
     }
 
-    // Foca no campo de destino após a inicialização
+    // Garante que o painel esteja aberto e foca no campo de destino após a inicialização
+    const panel = dom.collapsiblePanel;
+    if (panel && !panel.classList.contains('open')) {
+        dom.togglePanelButton.click();
+    }
     dom.destinationInput.focus();
 }
 

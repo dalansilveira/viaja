@@ -321,7 +321,8 @@ export function traceRoute(fitBounds = false) {
         addWaypoints: false,
         routeWhileDragging: false,
         collapsible: false,
-        showAlternatives: false
+        showAlternatives: false,
+        serviceUrl: 'https://router.project-osrm.org/route/v1' // Adicionado para evitar o uso do servidor de demonstração
     }).addTo(state.map);
 
     control.on('routesfound', function(e) {
@@ -481,7 +482,8 @@ export function traceRouteMotoristaOrigem(driverStartCoords, originCoords) {
                 { color: routeColor, weight: 4, opacity: 1 }
             ]
         },
-        show: false
+        show: false,
+        serviceUrl: 'https://router.project-osrm.org/route/v1' // Adicionado para evitar o uso do servidor de demonstração
     }).addTo(state.map);
 
     return control;
@@ -508,7 +510,8 @@ export function traceRouteMotoristaDestino(originCoords, destinationCoords) {
                 { color: routeColor, weight: 4, opacity: 1 }
             ]
         },
-        show: false
+        show: false,
+        serviceUrl: 'https://router.project-osrm.org/route/v1' // Adicionado para evitar o uso do servidor de demonstração
     }).addTo(state.map);
 
     return control;
