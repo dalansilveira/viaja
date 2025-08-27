@@ -1102,6 +1102,7 @@ body.dark #toggle-location-button:hover {
     outline: none;
     resize: none;
     overflow-y: hidden;
+    display: none; /* Oculta por padrão */
 }
 
 #destination-input {
