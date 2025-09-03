@@ -4,6 +4,7 @@ import { dom } from './dom.js';
 import { handleMapClick, showPushNotification, showPage, showRouteProgressModal, hideRouteProgressModal } from './ui.js';
 import { formatTime, estimateFare, formatPlaceForDisplay, formatAddressForTooltip, formatDestinationAddressForTooltip, debounce } from './utils.js';
 import { reverseGeocode, getUserLocation } from './api.js';
+import { getCurrentLocation } from './location.js'; // Importa a nova função
 
 let currentTileLayer;
 let animationFrameId = null;
@@ -406,57 +407,42 @@ export function traceRoute(fitBounds = false) {
 /**
  * Busca a localização atual do usuário uma única vez.
  */
-export async function updateUserLocationOnce() { // Adicionado 'async' aqui
-   
-    return new Promise((resolve, reject) => { // Retorna uma Promise
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const { latitude, longitude } = position.coords;
-                const newLatLng = { lat: latitude, lng: longitude };
+export async function updateUserLocationOnce() {
+    try {
+        const { latitude, longitude } = await getCurrentLocation();
+        const newLatLng = { lat: latitude, lng: longitude };
 
-            state.setCurrentUserCoords(newLatLng);
-            const fullAddressData = await reverseGeocode(latitude, longitude);
-            const addressText = formatAddressForTooltip(fullAddressData) || 'Localização atual';
-            if(fullAddressData) {
-                fullAddressData.display_name = addressText;
-            }
-            state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
-            addOrMoveMarker(newLatLng, 'origin', addressText, false); // Usa o endereço formatado, arrasto desabilitado por padrão
-            state.map.setView(newLatLng, AppConfig.MAP_ZOOM_LEVELS.USER_LOCATION_GPS); // Zoom mais próximo para localização única
-            resolve(); // Resolve a Promise em caso de sucesso do GPS
-        },
-        async (error) => {
-            console.error("Erro ao obter localização por GPS: ", error);
-            showPushNotification('Não foi possível obter sua localização GPS. Tentando por IP...', 'warning');
-            try {
-                const userLocation = await getUserLocation();
-                if (userLocation) {
-                    const newLatLng = { lat: ipLocation.lat, lng: ipLocation.lng };
-                    state.setCurrentUserCoords(newLatLng);
-                    const fullAddressData = await reverseGeocode(ipLocation.lat, ipLocation.lng);
-                    const addressText = formatAddressForTooltip(fullAddressData) || 'Localização aproximada';
-                    state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
-                    addOrMoveMarker(newLatLng, 'origin', addressText, false); // Usa o endereço formatado, arrasto desabilitado por padrão
-                    state.map.setView(newLatLng, AppConfig.MAP_ZOOM_LEVELS.USER_LOCATION_IP_FALLBACK);
-                    showPushNotification('Localização aproximada encontrada.', 'info');
-                    resolve(); // Resolve a Promise em caso de fallback por IP bem-sucedido
-                } else {
-                    showPushNotification('Não foi possível obter sua localização.', 'error');
-                    reject(new Error('Não foi possível obter sua localização.')); // Rejeita se o fallback por IP falhar
-                }
-            } catch (ipError) {
-                console.error("Erro ao buscar localização por IP:", ipError);
-                showPushNotification('Não foi possível obter sua localização.', 'error');
-                reject(ipError); // Rejeita em caso de erro no fallback por IP
-            }
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 8000, // Aumenta o timeout para dar mais chance ao GPS
-            maximumAge: 0
+        state.setCurrentUserCoords(newLatLng);
+        const fullAddressData = await reverseGeocode(latitude, longitude);
+        const addressText = formatAddressForTooltip(fullAddressData) || 'Localização atual';
+        if (fullAddressData) {
+            fullAddressData.display_name = addressText;
         }
-    );
-}); // Fecha a Promise
+        state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
+        addOrMoveMarker(newLatLng, 'origin', addressText, false);
+        state.map.setView(newLatLng, AppConfig.MAP_ZOOM_LEVELS.USER_LOCATION_GPS);
+    } catch (error) {
+        console.error("Erro ao obter localização: ", error);
+        showPushNotification('Não foi possível obter sua localização GPS. Tentando por IP...', 'warning');
+        try {
+            const ipLocation = await getUserLocation(); // Assume que getUserLocation retorna { lat, lng }
+            if (ipLocation) {
+                const newLatLng = { lat: ipLocation.lat, lng: ipLocation.lng };
+                state.setCurrentUserCoords(newLatLng);
+                const fullAddressData = await reverseGeocode(ipLocation.lat, ipLocation.lng);
+                const addressText = formatAddressForTooltip(fullAddressData) || 'Localização aproximada';
+                state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
+                addOrMoveMarker(newLatLng, 'origin', addressText, false);
+                state.map.setView(newLatLng, AppConfig.MAP_ZOOM_LEVELS.USER_LOCATION_IP_FALLBACK);
+                showPushNotification('Localização aproximada encontrada.', 'info');
+            } else {
+                showPushNotification('Não foi possível obter sua localização.', 'error');
+            }
+        } catch (ipError) {
+            console.error("Erro ao buscar localização por IP:", ipError);
+            showPushNotification('Não foi possível obter sua localização.', 'error');
+        }
+    }
 }
 
 function createDriverMarker(coords, vehicleType = 'car') {

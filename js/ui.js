@@ -186,6 +186,59 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
     const numberMatch = query.match(/(?:,|\s)\s*(\d+)$/);
     const userTypedNumber = numberMatch ? numberMatch[1] : null;
 
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
+    const proximityCoords = state.currentUserCoords || null;
+
+    console.log(`displayAddressSuggestions: Query: "${query}", userId: ${userId}`);
+
+    if (query.length === 0) { // Se o campo estiver vazio, mostra apenas o histórico
+        console.log("displayAddressSuggestions: Campo vazio, tentando mostrar histórico.");
+        if (!userId) {
+            console.log("displayAddressSuggestions: Usuário não logado, não pode mostrar histórico.");
+            loadingIndicator.style.display = 'none';
+            suggestionsEl.style.display = 'none';
+            return;
+        }
+        try {
+            const history = await getHistory(userId);
+            const recentHistory = history.slice(0, 5); // Últimos 5 itens do histórico
+            console.log("displayAddressSuggestions: Histórico obtido:", recentHistory);
+
+            loadingIndicator.style.display = 'none';
+            if (recentHistory.length > 0) {
+                console.log("displayAddressSuggestions: Renderizando histórico.");
+                const header = document.createElement('div');
+                header.className = 'suggestion-header';
+                header.textContent = 'Últimos destinos';
+                suggestionsEl.appendChild(header);
+
+                recentHistory.forEach(place => {
+                    renderSuggestion(place, place.display_name, inputEl, suggestionsEl, 'history', null);
+                });
+                suggestionsEl.style.display = 'block';
+
+                // Mover a lógica de abertura do painel e showPage para cá também
+                const panel = dom.collapsiblePanel;
+                console.log("displayAddressSuggestions (history): Verificando painel. Panel existe:", !!panel, "Está aberto:", panel?.classList.contains('open'));
+                if (panel && !panel.classList.contains('open')) {
+                    console.log("displayAddressSuggestions (history): Clicando no botão para abrir o painel.");
+                    dom.togglePanelButton.click();
+                }
+                console.log("displayAddressSuggestions (history): Chamando showPage('page2').");
+                showPage('page2');
+
+            } else {
+                console.log("displayAddressSuggestions: Histórico vazio.");
+                suggestionsEl.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("Erro ao buscar histórico para sugestões:", error);
+            loadingIndicator.style.display = 'none';
+        }
+        return; // Manter o return aqui para evitar que a lógica da API seja executada desnecessariamente
+    }
+
     if (query.length < 2) {
         loadingIndicator.style.display = 'none';
         suggestionsEl.style.display = 'none';
@@ -202,10 +255,6 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
         const regex = new RegExp(`^${prefix}\\s+`, 'i');
         return acc.replace(regex, '');
     }, query);
-
-    const auth = getAuth();
-    const userId = auth.currentUser?.uid;
-    const proximityCoords = state.currentUserCoords || null;
 
     try {
         // 1. Coletar todas as fontes de dados em paralelo
@@ -265,6 +314,13 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
 
                 renderSuggestion(place, place.display_name, inputEl, suggestionsEl, iconType, userTypedNumber);
 
+                console.log("Parâmetros para saveSuggestionToCache if:", {
+                    userId: userId,
+                    currentOriginCity: state.currentOrigin?.data?.address?.city,
+                    placeCity: place.address?.city,
+                    normalizedPlaceCity: place.address?.city?.toLowerCase(),
+                    normalizedCurrentOriginCity: state.currentOrigin?.data?.address?.city?.toLowerCase()
+                });
                 if (userId && state.currentOrigin?.data?.address?.city && place.address?.city?.toLowerCase() === state.currentOrigin.data.address.city.toLowerCase()) {
                     saveSuggestionToCache(place);
                 }
@@ -272,9 +328,12 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
 
             if (!state.currentDestination) {
                 const panel = dom.collapsiblePanel;
+                console.log("displayAddressSuggestions: Verificando painel. Panel existe:", !!panel, "Está aberto:", panel?.classList.contains('open'));
                 if (panel && !panel.classList.contains('open')) {
+                    console.log("displayAddressSuggestions: Clicando no botão para abrir o painel.");
                     dom.togglePanelButton.click();
                 }
+                console.log("displayAddressSuggestions: Chamando showPage('page2').");
                 showPage('page2');
             }
             suggestionsEl.style.display = 'block';
@@ -521,8 +580,13 @@ export function setupCollapsiblePanel() {
     const mapContainer = dom.mapContainer;
 
     if (toggleButton && panel && mapContainer) {
+        console.log("setupCollapsiblePanel: Painel e botão de alternância encontrados.");
+        console.log("setupCollapsiblePanel: Estado inicial do painel. Panel existe:", !!panel, "Está aberto:", panel?.classList.contains('open'));
+
         toggleButton.addEventListener('click', () => {
+            console.log("setupCollapsiblePanel: Botão de alternância clicado.");
             panel.classList.toggle('open');
+            console.log("setupCollapsiblePanel: Painel agora está aberto:", panel.classList.contains('open'));
             if (panel.classList.contains('open')) {
                 mapContainer.style.height = '50vh';
             } else {
@@ -535,6 +599,9 @@ export function setupCollapsiblePanel() {
                 }
             }, 300); // 300ms é a duração da transição
         });
+    } else {
+        console.error("setupCollapsiblePanel: Elementos do painel recolhível não encontrados!");
+        console.error("setupCollapsiblePanel: toggleButton:", toggleButton, "panel:", panel, "mapContainer:", mapContainer);
     }
 }
 
@@ -543,16 +610,21 @@ export function setupCollapsiblePanel() {
  * @param {string} pageId - O ID da página a ser exibida.
  */
 export function showPage(pageId) {
+    console.log(`showPage: Tentando exibir a página: ${pageId}`);
     const pageContents = document.querySelectorAll('.page-content');
     pageContents.forEach(content => {
         content.classList.add('hidden');
         content.classList.remove('active');
+        console.log(`showPage: Escondendo página: ${content.id}`);
     });
 
     const targetPage = document.getElementById(pageId);
     if (targetPage) {
         targetPage.classList.remove('hidden');
         targetPage.classList.add('active');
+        console.log(`showPage: Exibindo página: ${pageId}. Classes: ${targetPage.classList}`);
+    } else {
+        console.warn(`showPage: Página com ID "${pageId}" não encontrada.`);
     }
 }
 
@@ -568,10 +640,6 @@ function setupViewportListener() {
             console.error('Elemento #panel-container não encontrado para o ajuste do viewport.');
             return;
         }
-
-
-
-
 
         const handleViewportChange = () => {
             // A altura total da janela interna
@@ -591,8 +659,6 @@ function setupViewportListener() {
                 panelContainer.style.bottom = '0px';
             }
         };
-
-       
 
         // Adiciona o listener para o evento de resize da VisualViewport
         window.visualViewport.addEventListener('resize', handleViewportChange);

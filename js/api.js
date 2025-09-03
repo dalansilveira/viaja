@@ -6,6 +6,7 @@ import { AppConfig } from './config.js';
 import { updateUserLastLocation } from './firestore.js';
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import * as state from './state.js';
+import { getCurrentLocation } from './location.js'; // Importa a nova função
 
 /**
  * Busca sugestões de endereço com base em uma consulta usando OpenCageData.
@@ -113,25 +114,23 @@ export async function reverseGeocode(lat, lng) {
  * Obtém a localização do usuário usando a API de Geolocalização do navegador.
  * @returns {Promise<object|null>} As coordenadas de latitude e longitude ou nulo.
  */
-export function getUserLocation() {
-    return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-            console.error("Geolocalização não é suportada por este navegador.");
-            reject(new Error("Geolocalização não suportada"));
-            return;
-        }
+//import { AppConfig } from './config.js'; // Importar AppConfig
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                resolve({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                });
-            },
-            (error) => {
-                console.error("Erro ao obter a localização:", error);
-                reject(error);
-            }
-        );
-    });
+export async function getUserLocation() {
+    if (!AppConfig.useGeolocation) {
+        console.warn("Uso da API de Geolocalização desabilitado via AppConfig.");
+        return null; // Retorna null para simular falha ou desativação
+    }
+
+    try {
+        const { latitude, longitude } = await getCurrentLocation();
+        return {
+            lat: latitude,
+            lng: longitude
+        };
+    } catch (error) {
+        console.error("Erro ao obter a localização:", error);
+        // Se o erro for de permissão negada, ainda podemos tentar o fallback por IP em app.js
+        return null;
+    }
 }

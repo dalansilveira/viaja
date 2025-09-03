@@ -42,6 +42,22 @@ export const AppConfig = {
         driverToDestinationMax: 20000 // Duração máxima para a rota da origem até o destino (40 segundos)
     },
 
+    // Habilita ou desabilita o uso da API de Geolocalização do navegador.
+    useGeolocation: false, // Mantido como true para uso normal da API
+
+
+    // Localização mockada para desenvolvimento (latitude, longitude)
+    MOCKED_LOCATION: {
+        latitude: -5.8932333, //-23.550520, // Exemplo: Centro de São Paulo
+        longitude: -35.76531//-46.633308
+    },
+
+    // Habilita ou desabilita a localização mockada para desenvolvimento.
+    // Defina como 'true' para usar a localização mockada, 'false' para usar a localização real.
+    useMockLocation: true, // Definido como false por padrão para produção
+
+    
+
     // Definições de zoom do mapa
     MAP_ZOOM_LEVELS: {
         DEFAULT: 10, // Zoom padrão para inicialização do mapa

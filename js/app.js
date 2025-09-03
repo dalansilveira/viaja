@@ -4,6 +4,7 @@ import { saveAppState, loadAppState } from './state.js';
 import { debounce, formatTime, formatPlaceForDisplay, estimateFare, isMobileDevice, normalizeText } from './utils.js';
 import { getUserLocation, reverseGeocode } from './api.js';
 import { initializeMap, addOrMoveMarker, traceRoute, setMapTheme, updateUserLocationOnce, simulateDriverEnRoute, stopDriverSimulation } from './map.js';
+import { getCurrentLocation, watchUserLocation, clearWatch } from './location.js'; // Importa as novas funções
 import { displayAddressSuggestions, refreshMap, switchPanel, showPushNotification, toggleTheme, toggleGpsModal, setSelectionButtonState, setupCollapsiblePanel, showPage } from './ui.js';
 import { saveDestinationToHistory } from './history.js';
 import { setupAuthEventListeners } from './auth.js';
@@ -312,11 +313,13 @@ function setupAppEventListeners() {
     }, { capture: true }); // Usa a fase de captura para ser o primeiro a receber o evento
 
     dom.destinationInput.addEventListener('focus', (e) => {
+        console.log("Evento 'focus' disparado no campo de destino.");
         const vehiclePage = document.getElementById('page3');
         const isVehicleSelectionActive = vehiclePage && !vehiclePage.classList.contains('hidden');
 
         // CONDIÇÃO: Se já temos um destino E estamos na tela de veículos...
         if (state.currentDestination && isVehicleSelectionActive) {
+            console.log("Destino já selecionado e na tela de veículos. Limpando rota e mostrando página 2.");
             // AÇÃO 1: Limpa APENAS a rota, mantendo o texto do input.
             clearRouteOnly();
             // AÇÃO 2: Volta o painel para a página 2 (sugestões de endereço).
@@ -336,11 +339,12 @@ function setupAppEventListeners() {
         }
 
         // Comportamento original mantido para todos os outros casos.
+        // Se o campo estiver vazio, displayAddressSuggestions já vai mostrar o histórico.
+        console.log("Chamando displayAddressSuggestions no focus.");
         const abortController = new AbortController();
         displayAddressSuggestions(e.target, dom.destinationSuggestions, abortController.signal);
 
-        // Dispara um evento 'input' para garantir que o ghost text seja atualizado no foco
-        dom.destinationInput.dispatchEvent(new Event('input'));
+        // Removido o dispatchEvent(new Event('input')) para evitar chamadas duplicadas
     });
 
     // Adiciona o listener de click para aceitar a sugestão in-line
@@ -606,16 +610,25 @@ async function initializeMapAndLocation(isDark) {
     let initialCoords = null;
     let initialZoom = 2;
 
-    // 1. Tenta obter a localização precisa do usuário primeiro
-    if (!initialCoords) {
+    // 1. Tenta obter a localização precisa do usuário usando a nova função
+    try {
+        const userLocation = await getCurrentLocation();
+        if (userLocation) {
+            initialCoords = { lat: userLocation.latitude, lng: userLocation.longitude };
+            initialZoom = 15; // Zoom maior para localização precisa
+        }
+    } catch (error) {
+        console.warn("Não foi possível obter a localização precisa via GPS. O usuário pode ter negado a permissão ou está em modo mock.", error);
+        // 2. Se falhar, tenta obter a localização por IP como fallback
         try {
-            const userLocation = await getUserLocation();
-            if (userLocation) {
-                initialCoords = { lat: userLocation.lat, lng: userLocation.lng };
-                initialZoom = 15; // Zoom maior para localização precisa
+            const ipLocation = await getUserLocation();
+            if (ipLocation) {
+                initialCoords = { lat: ipLocation.lat, lng: ipLocation.lng };
+                initialZoom = 10; // Zoom intermediário para localização por IP
+                showPushNotification('Localização aproximada encontrada por IP.', 'info');
             }
-        } catch (error) {
-            console.warn("Não foi possível obter a localização precisa via GPS. O usuário pode ter negado a permissão.", error);
+        } catch (ipError) {
+            console.warn("Não foi possível obter a localização por IP.", ipError);
         }
     }
     
@@ -627,51 +640,49 @@ async function initializeMapAndLocation(isDark) {
     // 4. Inicializa o mapa com as melhores coordenadas encontradas
     initializeMap(initialCoords.lat, initialCoords.lng, initialZoom, isDark);
 
-    // 6. SEMPRE tenta iniciar o rastreamento de localização por padrão, se disponível
-    if (navigator.geolocation) {
-        await updateUserLocationOnce(); // Espera a localização ser atualizada
-        // Se ainda não tivermos uma origem definida, o rastreamento cuidará disso
+    // 5. SEMPRE tenta iniciar o rastreamento de localização por padrão, se disponível
+    // A função updateUserLocationOnce já usa getCurrentLocation internamente
+    await updateUserLocationOnce(); 
 
-        // Lógica para focar no campo de destino apenas na primeira vez
-        const hasInitialFocusApplied = localStorage.getItem('hasInitialFocusApplied');
-        if (!hasInitialFocusApplied) {
-            setTimeout(() => {
-                // Abre o painel e mostra a página 1 se ainda não estiver aberto
-                const panel = dom.collapsiblePanel;
-                if (panel && !panel.classList.contains('open')) {
-                    dom.togglePanelButton.click();
+    // Lógica para focar no campo de destino apenas na primeira vez
+    const hasInitialFocusApplied = localStorage.getItem('hasInitialFocusApplied');
+    if (!hasInitialFocusApplied) {
+        setTimeout(() => {
+            // Abre o painel e mostra a página 1 se ainda não estiver aberto
+            const panel = dom.collapsiblePanel;
+            if (panel && !panel.classList.contains('open')) {
+                dom.togglePanelButton.click();
+            }
+            showPage('page1'); // Garante que a página inicial do painel esteja visível
+
+            // Tenta focar e abrir o teclado virtual no campo de destino
+            console.log('Tentando focar e abrir teclado no campo de destino...');
+            if (dom.destinationInput && !dom.destinationInput.disabled && !dom.destinationInput.hidden) {
+                dom.destinationInput.focus(); // Tenta focar primeiro
+                if (isMobileDevice()) {
+                    // Tenta simular um touchstart para "forçar" a abertura do teclado
+                    const touchEvent = new TouchEvent('touchstart', {
+                        touches: [{ clientX: 0, clientY: 0 }],
+                        targetTouches: [{ clientX: 0, clientY: 0 }],
+                        changedTouches: [{ clientX: 0, clientY: 0 }],
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    dom.destinationInput.dispatchEvent(touchEvent);
+                    // Um clique adicional pode ser útil em alguns casos, mesmo após o touchstart
+                    dom.destinationInput.click();
                 }
-                showPage('page1'); // Garante que a página inicial do painel esteja visível
+            } else {
+                console.warn('Campo de destino não está disponível, desabilitado ou oculto. Não foi possível focar.');
+            }
+            localStorage.setItem('hasInitialFocusApplied', 'true');
+        }, 750); // Aumenta o atraso para dar mais tempo ao DOM e à UI para estabilizar
+    }
 
-                // Tenta focar e abrir o teclado virtual no campo de destino
-                console.log('Tentando focar e abrir teclado no campo de destino...');
-                if (dom.destinationInput && !dom.destinationInput.disabled && !dom.destinationInput.hidden) {
-                    dom.destinationInput.focus(); // Tenta focar primeiro
-                    if (isMobileDevice()) {
-                        // Tenta simular um touchstart para "forçar" a abertura do teclado
-                        const touchEvent = new TouchEvent('touchstart', {
-                            touches: [{ clientX: 0, clientY: 0 }],
-                            targetTouches: [{ clientX: 0, clientY: 0 }],
-                            changedTouches: [{ clientX: 0, clientY: 0 }],
-                            bubbles: true,
-                            cancelable: true
-                        });
-                        dom.destinationInput.dispatchEvent(touchEvent);
-                        // Um clique adicional pode ser útil em alguns casos, mesmo após o touchstart
-                        dom.destinationInput.click();
-                    }
-                } else {
-                    console.warn('Campo de destino não está disponível, desabilitado ou oculto. Não foi possível focar.');
-                }
-                localStorage.setItem('hasInitialFocusApplied', 'true');
-            }, 750); // Aumenta o atraso para dar mais tempo ao DOM e à UI para estabilizar
-        }
-
-    } else {
-        // Se não houver geolocalização e não foi possível encontrar a localização por outros meios, mostra o modal
-        if (initialZoom === 2) { // Isso significa que estamos na localização genérica 0,0
-            toggleGpsModal(true);
-        }
+    // Se não houver geolocalização e não foi possível encontrar a localização por outros meios, mostra o modal
+    // A condição `initialZoom === 2` indica que nenhuma localização foi encontrada (nem GPS, nem IP)
+    if (initialZoom === 2) {
+        toggleGpsModal(true);
     }
 
     dom.loadingModal.classList.add('hidden'); // Esconde a modal de carregamento
