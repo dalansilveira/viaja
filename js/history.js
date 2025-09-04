@@ -18,6 +18,12 @@ export async function saveDestinationToHistory(place) {
         console.error("Condição para salvar histórico não atendida (usuário ou local ausente).", { userId, place });
         return;
     }
+    
+    if (AppConfig.DISABLE_ADDRESS_SUGGESTION_HISTORY) {
+        console.log("Histórico de sugestões desabilitado via AppConfig. Não salvando no histórico.");
+        return;
+    }
+
     await addHistory(userId, place);
 }
 
@@ -101,6 +107,12 @@ function renderList(container, items, isFavorites, favoritesList = []) {
 }
 
 export async function renderRideHistory() {
+    if (AppConfig.DISABLE_ADDRESS_SUGGESTION_HISTORY) {
+        console.log("Histórico de sugestões desabilitado via AppConfig. Não renderizando histórico.");
+        dom.rideHistoryList.innerHTML = `<p class="text-center text-sm text-gray-500 dark:text-gray-400 p-4">O histórico de sugestões está desabilitado.</p>`;
+        return;
+    }
+
     const auth = getAuth();
     const userId = auth.currentUser?.uid;
     if (!userId) {

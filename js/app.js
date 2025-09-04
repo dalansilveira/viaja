@@ -642,17 +642,7 @@ async function initializeMapAndLocation(isDark) {
 
     // 5. SEMPRE tenta iniciar o rastreamento de localização por padrão, se disponível
     // A função updateUserLocationOnce já usa getCurrentLocation internamente
-    const locationFound = await updateUserLocationOnce(); 
-
-    // Se a localização não foi encontrada por GPS ou IP, define uma origem padrão no centro do mapa
-    if (!locationFound && !state.currentOrigin) {
-        const defaultCoords = { lat: initialCoords.lat, lng: initialCoords.lng };
-        state.setCurrentUserCoords(defaultCoords);
-        state.setCurrentOrigin({ latlng: defaultCoords, data: { display_name: 'Localização desconhecida' } });
-        addOrMoveMarker(defaultCoords, 'origin', 'Localização desconhecida', false);
-        state.map.setView(defaultCoords, AppConfig.MAP_ZOOM_LEVELS.DEFAULT);
-        showPushNotification('Não foi possível obter sua localização. Usando localização padrão.', 'warning');
-    }
+    await updateUserLocationOnce(); 
 
     // Lógica para focar no campo de destino apenas na primeira vez
     const hasInitialFocusApplied = localStorage.getItem('hasInitialFocusApplied');
@@ -691,8 +681,7 @@ async function initializeMapAndLocation(isDark) {
 
     // Se não houver geolocalização e não foi possível encontrar a localização por outros meios, mostra o modal
     // A condição `initialZoom === 2` indica que nenhuma localização foi encontrada (nem GPS, nem IP)
-    // E se a localização padrão não foi usada (ou seja, initialCoords ainda é 0,0)
-    if (initialZoom === 2 && !locationFound) {
+    if (initialZoom === 2) {
         toggleGpsModal(true);
     }
 

@@ -421,7 +421,6 @@ export async function updateUserLocationOnce() {
         state.setCurrentOrigin({ latlng: newLatLng, data: fullAddressData });
         addOrMoveMarker(newLatLng, 'origin', addressText, false);
         state.map.setView(newLatLng, AppConfig.MAP_ZOOM_LEVELS.USER_LOCATION_GPS);
-        return true; // Indica sucesso
     } catch (error) {
         console.error("Erro ao obter localização: ", error);
         showPushNotification('Não foi possível obter sua localização GPS. Tentando por IP...', 'warning');
@@ -436,15 +435,12 @@ export async function updateUserLocationOnce() {
                 addOrMoveMarker(newLatLng, 'origin', addressText, false);
                 state.map.setView(newLatLng, AppConfig.MAP_ZOOM_LEVELS.USER_LOCATION_IP_FALLBACK);
                 showPushNotification('Localização aproximada encontrada.', 'info');
-                return true; // Indica sucesso
             } else {
                 showPushNotification('Não foi possível obter sua localização.', 'error');
-                return false; // Indica falha
             }
         } catch (ipError) {
             console.error("Erro ao buscar localização por IP:", ipError);
             showPushNotification('Não foi possível obter sua localização.', 'error');
-            return false; // Indica falha
         }
     }
 }

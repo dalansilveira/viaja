@@ -192,8 +192,16 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
 
     console.log(`displayAddressSuggestions: Query: "${query}", userId: ${userId}`);
 
-    if (query.length === 0) { // Se o campo estiver vazio, mostra apenas o histórico
-        console.log("displayAddressSuggestions: Campo vazio, tentando mostrar histórico.");
+    if (query.length === 0) { // Se o campo estiver vazio, mostra apenas o histórico (se não desabilitado)
+        console.log("displayAddressSuggestions: Campo vazio.");
+        if (AppConfig.DISABLE_ADDRESS_SUGGESTION_HISTORY) {
+            console.log("displayAddressSuggestions: Histórico de sugestões desabilitado via AppConfig.");
+            loadingIndicator.style.display = 'none';
+            suggestionsEl.style.display = 'none';
+            return;
+        }
+
+        console.log("displayAddressSuggestions: Tentando mostrar histórico.");
         if (!userId) {
             console.log("displayAddressSuggestions: Usuário não logado, não pode mostrar histórico.");
             loadingIndicator.style.display = 'none';
@@ -258,11 +266,17 @@ export async function displayAddressSuggestions(inputEl, suggestionsEl, signal) 
 
     try {
         // 1. Coletar todas as fontes de dados em paralelo
-        const [history, favorites, apiResults] = await Promise.all([
-            userId ? getHistory(userId) : Promise.resolve([]),
-            userId ? getFavorites(userId) : Promise.resolve([]),
-            fetchAddressSuggestions(cleanedQuery, proximityCoords, signal)
-        ]);
+        let history = [];
+        let favorites = [];
+
+        if (!AppConfig.DISABLE_ADDRESS_SUGGESTION_HISTORY && userId) {
+            [history, favorites] = await Promise.all([
+                getHistory(userId),
+                getFavorites(userId)
+            ]);
+        }
+
+        const apiResults = await fetchAddressSuggestions(cleanedQuery, proximityCoords, signal);
 
         if (signal.aborted) return;
 

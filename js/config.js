@@ -43,7 +43,7 @@ export const AppConfig = {
     },
 
     // Habilita ou desabilita o uso da API de Geolocalização do navegador.
-    useGeolocation: true, // Mantido como true para uso normal da API
+    useGeolocation: false, // Mantido como true para uso normal da API
 
 
     // Localização mockada para desenvolvimento (latitude, longitude)
@@ -54,9 +54,10 @@ export const AppConfig = {
 
     // Habilita ou desabilita a localização mockada para desenvolvimento.
     // Defina como 'true' para usar a localização mockada, 'false' para usar a localização real.
-    useMockLocation: false, // Definido como false por padrão para produção
+    useMockLocation: true, // Definido como false por padrão para produção
 
-    
+    // Desabilita o histórico de sugestões de endereço.
+    DISABLE_ADDRESS_SUGGESTION_HISTORY: true,
 
     // Definições de zoom do mapa
     MAP_ZOOM_LEVELS: {
