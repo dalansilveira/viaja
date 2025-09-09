@@ -43,7 +43,7 @@ export const AppConfig = {
     },
 
     // Habilita ou desabilita o uso da API de Geolocalização do navegador.
-    useGeolocation: true, // Mantido como true para uso normal da API
+    useGeolocation: false, // Mantido como true para uso normal da API
 
 
     // Localização mockada para desenvolvimento (latitude, longitude)
