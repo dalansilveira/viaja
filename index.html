@@ -373,9 +373,13 @@
                     </div>
                     <div id="page3" class="page-content hidden">
                         <h2 class="text-xl font-bold mb-2 text-center">Selecione o tipo de veículo</h2>
-                        <div id="la src="imgs/moto.svg" class="w-6 h-6" alt="Moto">
+                        <div id="estimated-distance-time" class="text-center text-sm text-gray-500 dark:text-gray-400 mb-4"></div>
+                        <div id="vehicle-buttons-container" class="grid grid-cols-2 gap-4">
+                            <button type="button" class="vehicle-button" data-vehicle="Moto">
+                                <img src="imgs/moto.svg" class="w-6 h-6" alt="Moto">
                                 Moto
-                              
+                                <span class="vehicle-price"></span>
+                            </button>
                             <button type="button" class="vehicle-button" data-vehicle="Carro">
                                 <img src="imgs/carro.svg" class="w-6 h-6" alt="Carro">
                                 Carro
